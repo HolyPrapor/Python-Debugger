@@ -16,7 +16,7 @@ This application is developing for debugging python programs.
 * Console version: `consoleInterface.py`
 
 
-## Консольная версия
+## Console version
 Help: `./consoleInterface.py --help`
 
 Launch example: `./consoleInterface.py testProgramsToDebug/calculate.py`
@@ -27,5 +27,5 @@ Launch example: `./consoleInterface.py testProgramsToDebug/calculate.py`
 * `Number of command "COMMAND" in command list` — Launch "COMMAND"
 
 
-## Подробности реализации
+## Implementation details
 UNDER DEVELOPMENT
