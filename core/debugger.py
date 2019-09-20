@@ -45,7 +45,7 @@ def debug():
 
 def get_code_context():
     __, line_number, __, lines, __ = inspect.getframeinfo(
-        current_program_frame, 10)
+        current_program_frame, 10000)
     return lines, line_number
 
 
@@ -90,23 +90,26 @@ def modify_code(file_code):
     current_line = -1
     modified_bytecode = []
     for instruction in file_bytecode:
-        if current_line != instruction.lineno:
-            current_line = instruction.lineno
-            modified_bytecode.append(
-                Instr('LOAD_GLOBAL', 'debug',
-                      lineno=current_line))
-            modified_bytecode.append(
-                Instr('CALL_FUNCTION', 0,
-                      lineno=current_line))
-            modified_bytecode.append(
-                Instr('POP_TOP',
-                      lineno=current_line))
-        if instruction.name == "LOAD_CONST" \
-                and type(instruction.arg) == type(file_code):
-            modified_bytecode.append(
-                Instr('LOAD_CONST',
-                      modify_code(instruction.arg),
-                      lineno=current_line))
+        if hasattr(instruction, "lineno"):
+            if current_line != instruction.lineno:
+                current_line = instruction.lineno
+                modified_bytecode.append(
+                    Instr('LOAD_GLOBAL', 'debug',
+                          lineno=current_line),)
+                modified_bytecode.append(
+                    Instr('CALL_FUNCTION', 0,
+                          lineno=current_line))
+                modified_bytecode.append(
+                    Instr('POP_TOP',
+                          lineno=current_line))
+            if instruction.name == "LOAD_CONST" \
+                    and type(instruction.arg) == type(file_code):
+                modified_bytecode.append(
+                    Instr('LOAD_CONST',
+                          modify_code(instruction.arg),
+                          lineno=current_line))
+            else:
+                modified_bytecode.append(instruction)
         else:
             modified_bytecode.append(instruction)
     file_bytecode.clear()
@@ -131,7 +134,7 @@ def start_debugging(debug_function, file, mode=DebugMode.StepMode):
     global current_debug_interface, current_debug_mode
     current_debug_interface = debug_function
     current_debug_mode = DebugMode(mode)
-    with open(file, 'r') as code:
+    with open(file, 'r', encoding='utf8') as code:
         compiled_code = compile(code.read(), file, 'exec')
         modified_code = modify_code(compiled_code)
     _globals = {
