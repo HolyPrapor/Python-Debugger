@@ -5,6 +5,7 @@ from enum import Enum
 from contextlib import redirect_stdout, redirect_stderr
 import core.debuggerLoader as debuggerLoader
 import sys
+import dis
 
 
 class Breakpoint:
@@ -46,23 +47,21 @@ def debug():
         current_debug_interface()
 
 
-#  TESTS
 def get_stacktrace():
     stack = collections.deque()
     current_frame = inspect.currentframe().f_back
-    stack.appendleft(current_frame)
+    stack.append(current_frame)
     while current_frame.f_back is not None:
         current_frame = current_frame.f_back
-        stack.appendleft(current_frame)
+        stack.append(current_frame)
     return stack
 
 
-#  TESTS
 def should_stop_on_breakpoint():
     line_num = get_line_number()
     filename = get_filename()
     if line_num in breakpoints and filename in breakpoints[line_num]:
-        if breakpoints[line_num][filename] is not None:
+        if breakpoints[line_num][filename].condition is not None:
             try:
                 return eval(breakpoints[line_num][filename].condition, *get_globals_and_locals())
             except Exception:
@@ -90,7 +89,6 @@ def get_debug_mode():
     return current_debug_mode
 
 
-#   TESTS
 def add_breakpoint(filename, line_number, condition=None):
     if line_number not in breakpoints:
         breakpoints[line_number] = dict()
@@ -99,7 +97,6 @@ def add_breakpoint(filename, line_number, condition=None):
     breakpoints[line_number][filename] = Breakpoint(filename, line_number, condition)
 
 
-#   TESTS
 def remove_breakpoint(filename, line_number):
     if line_number in breakpoints and filename in breakpoints[line_number]:
         del breakpoints[line_number][filename]
@@ -120,13 +117,11 @@ def get_filename():
     return filename
 
 
-# TESTS
 def modify_var(out_depth, modify_expression):
     dicts = (current_stacktrace[out_depth].f_globals, current_stacktrace[out_depth].f_locals)
     exec_code(modify_expression, dicts)
 
 
-# TESTS
 def exec_code(code, dicts=None):
     if dicts is None:
         dicts = get_globals_and_locals()
