@@ -17,9 +17,9 @@ This application is developing for debugging python programs.
 
 
 ## Console version
-Help: `./consoleInterface.py --help`
+Help: `./consoleDebugger.py --help`
 
-Launch example: `./consoleInterface.py testProgramsToDebug/calculate.py`
+Launch example: `./consoleDebugger.py testProgramsToDebug/calculate.py`
 
 ### Usage
 
