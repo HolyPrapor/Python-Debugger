@@ -48,7 +48,7 @@ class Main(QMainWindow):
             self.clear_highlights()
             self.highlight_line(line)
             if col == 0:
-                self.get_breakpoint_dialog(line)
+                self.get_breakpoint_dialog(line + 1)
 
     def attach_cursor_tracker(self, new_tab):
         new_tab.cursorPositionChanged.connect(self.on_cursor_position_change)
