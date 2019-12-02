@@ -32,22 +32,26 @@ class Main(QMainWindow):
     def open(self):
         (filename, _) = QFileDialog.getOpenFileName(self, 'Open file')
         with open(filename, 'r') as file:
-            data = file.read()
+            data = ''
+            for index, line in enumerate(file.readlines()):
+                data += ' ' + str(index + 1) + '\t' + line
         new_tab = FileViewerWidget(data)
         self.tab_widget.add(new_tab, filename)
         self.attach_cursor_tracker(new_tab)
 
-    def cursor_position(self):
+    def on_cursor_position_change(self):
         if len(self.tab_widget.tabs) > 0:
             line = self.tab_widget.tabs.currentWidget().textCursor().blockNumber()
             col = self.tab_widget.tabs.currentWidget().textCursor().columnNumber()
-            linecol = ("Line: " + str(line) + " | " + "Column: " + str(col))
+            linecol = ("Line: " + str(line + 1) + " | " + "Column: " + str(col + 1))
             self.status.showMessage(linecol)
             self.clear_highlights()
             self.highlight_line(line)
+            if col == 0:
+                self.get_breakpoint_dialog(line)
 
     def attach_cursor_tracker(self, new_tab):
-        new_tab.cursorPositionChanged.connect(self.cursor_position)
+        new_tab.cursorPositionChanged.connect(self.on_cursor_position_change)
 
     def highlight_line(self, line):
         fmt = QTextCharFormat()
@@ -68,6 +72,14 @@ class Main(QMainWindow):
         cursor = self.tab_widget.tabs.currentWidget().textCursor()
         cursor.select(QTextCursor.Document)
         cursor.setCharFormat(fmt)
+
+    def get_breakpoint_dialog(self, line_num):
+        text, ok_pressed = \
+            QInputDialog.getText(self, "Set breakpoint on {}".format(line_num),
+                                 "Condition (empty means no condition)"
+                                 , QLineEdit.Normal, "")
+        if ok_pressed and text != '':
+            print(text)
 
 
 class FileViewerWidget(QTextEdit):
