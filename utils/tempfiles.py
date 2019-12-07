@@ -9,7 +9,8 @@ class TempFiles:
     def __enter__(self):
         self.files = []
         for _ in range(self.amount):
-            self.files.append(tempfile.NamedTemporaryFile(delete=False, suffix='.py'))
+            self.files.append(tempfile.NamedTemporaryFile(delete=False,
+                                                          suffix='.py'))
         return self.files
 
     def __exit__(self, exc_type, exc_val, exc_tb):

@@ -1,5 +1,6 @@
-import sys
 import os
+import sys
+
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 
@@ -10,6 +11,11 @@ class Main(QMainWindow):
         QMainWindow.__init__(self, None)
         self.status = self.statusBar()
         self.tab_widget = DebugTabWidget(self)
+        self.menubar = self.menuBar()
+        self.toolbar = self.addToolBar('Debug actions')
+        data = [{'1': 2, '3': 4}, {'5': 6, '7': 8}]
+        self.stacktrace_widget = Stacktrace_Widget(data)
+        self.stacktrace_widget.show()
         self.setCentralWidget(self.tab_widget)
         self.init_ui()
 
@@ -19,18 +25,21 @@ class Main(QMainWindow):
         open_action.setShortcut("Ctrl+O")
         open_action.triggered.connect(self.open)
 
-        self.showMaximized()
+        self.toolbar.addAction(open_action)
+
+        file = self.menubar.addMenu("File")
+        file.addAction(open_action)
+
+        self.setGeometry(100, 100, 1000, 1000)
+        self.showMaximized()  # Doesn't work correctly without setGeometry()
         self.setWindowTitle("Python debugger")
         # self.setWindowIcon(QIcon("icons/feather.png"))
         self.show()
 
-        menubar = self.menuBar()
-        file = menubar.addMenu("File")
-
-        file.addAction(open_action)
-
     def open(self):
         (filename, _) = QFileDialog.getOpenFileName(self, 'Open file')
+        if not filename:
+            return
         with open(filename, 'r') as file:
             data = ''
             for index, line in enumerate(file.readlines()):
@@ -41,9 +50,12 @@ class Main(QMainWindow):
 
     def on_cursor_position_change(self):
         if len(self.tab_widget.tabs) > 0:
-            line = self.tab_widget.tabs.currentWidget().textCursor().blockNumber()
-            col = self.tab_widget.tabs.currentWidget().textCursor().columnNumber()
-            linecol = ("Line: " + str(line + 1) + " | " + "Column: " + str(col + 1))
+            line = self.tab_widget.tabs.currentWidget().textCursor(
+            ).blockNumber()
+            col = self.tab_widget.tabs.currentWidget().textCursor(
+            ).columnNumber()
+            linecol = ("Line: " + str(line + 1) + " | " + "Column: " + str(
+                col + 1))
             self.status.showMessage(linecol)
             self.clear_highlights()
             self.highlight_line(line)
@@ -57,7 +69,8 @@ class Main(QMainWindow):
         fmt = QTextCharFormat()
         fmt.setBackground(QColor(255, 0, 0))
 
-        block = self.tab_widget.tabs.currentWidget().document().findBlockByLineNumber(line)
+        block = self.tab_widget.tabs.currentWidget().document(
+        ).findBlockByLineNumber(line)
         block_pos = block.position()
 
         cursor = self.tab_widget.tabs.currentWidget().textCursor()
@@ -80,6 +93,29 @@ class Main(QMainWindow):
                                  , QLineEdit.Normal, "")
         if ok_pressed and text != '':
             print(text)
+
+
+class Stacktrace_Widget(QWidget):
+    def __init__(self, data):
+        super(QWidget, self).__init__()
+        self.tree = QTreeView(self)
+        layout = QVBoxLayout(self)
+        layout.addWidget(self.tree)
+        self.model = QStandardItemModel()
+        self.model.setHorizontalHeaderLabels(['Name', 'dbID'])
+        self.tree.header().setDefaultSectionSize(180)
+        self.tree.setModel(self.model)
+        self.importData(data)
+
+    def importData(self, data):
+        self.model.setRowCount(0)
+        root = self.model.invisibleRootItem()
+        for index, stack_values in enumerate(data):
+            parent = QStandardItem(str(index + 1))
+            for key in stack_values.keys():
+                parent.appendRow([QStandardItem(str(key)),
+                                  QStandardItem(str(stack_values[key]))])
+            root.appendRow(parent)
 
 
 class FileViewerWidget(QTextEdit):

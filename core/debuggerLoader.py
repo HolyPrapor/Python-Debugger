@@ -23,7 +23,8 @@ class DebugLoader(Loader):
         _globals = vars(module)
         _globals['debug'] = debug
         _globals['__name__'] = '__main__'
-        exec(modified_code, _globals)  # if globals[debug] = self.debug ... ? if compile filename is not exact ?
+        exec(modified_code, _globals)  # if globals[debug] = self.debug
+        # ... ? if compile filename is not exact ?
 
 
 def install_custom_loader(debug_function):

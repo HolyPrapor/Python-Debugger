@@ -5,7 +5,6 @@ from enum import Enum
 from contextlib import redirect_stdout, redirect_stderr
 import core.debuggerLoader as debuggerLoader
 import sys
-import dis
 
 
 class Breakpoint:
@@ -63,7 +62,8 @@ def should_stop_on_breakpoint():
     if line_num in breakpoints and filename in breakpoints[line_num]:
         if breakpoints[line_num][filename].condition is not None:
             try:
-                return eval(breakpoints[line_num][filename].condition, *get_globals_and_locals())
+                return eval(breakpoints[line_num][filename].condition,
+                            *get_globals_and_locals())
             except Exception:
                 raise Exception  # What type of exception should I use?
         return True
@@ -72,7 +72,8 @@ def should_stop_on_breakpoint():
 
 def get_code_context():
     __, line_number, __, lines, __ = inspect.getframeinfo(
-        current_program_frame, 100000)  # I don't know how to force this func to return all lines
+        current_program_frame, 100000)  # I don't know how to
+    # force this func to return all lines
     return lines, line_number
 
 
@@ -94,7 +95,8 @@ def add_breakpoint(filename, line_number, condition=None):
         breakpoints[line_number] = dict()
     if filename in breakpoints[line_number]:
         raise LookupError
-    breakpoints[line_number][filename] = Breakpoint(filename, line_number, condition)
+    breakpoints[line_number][filename] = Breakpoint(filename, line_number,
+                                                    condition)
 
 
 def remove_breakpoint(filename, line_number):
@@ -118,7 +120,8 @@ def get_filename():
 
 
 def modify_var(out_depth, modify_expression):
-    dicts = (current_stacktrace[out_depth].f_globals, current_stacktrace[out_depth].f_locals)
+    dicts = (current_stacktrace[out_depth].f_globals,
+             current_stacktrace[out_depth].f_locals)
     exec_code(modify_expression, dicts)
 
 
