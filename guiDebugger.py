@@ -46,6 +46,15 @@ class Main(QMainWindow):
         self.set_window_ui()
         self.set_menu()
         self.toolbar = self.addToolBar('Debug actions')
+        self.toolbar.addAction(QAction(QIcon('icons/info.svg'),
+                               'Start debugging', self, shortcut='F5',
+                               triggered=self.start_debugging))
+        self.toolbar.addAction(QAction(QIcon('icons/info.svg'),
+                               'Continue', self, shortcut='F8',
+                    triggered=self.continue_until_breakpoint))
+        self.toolbar.addAction(QAction(QIcon('icons/info.svg'),
+                               'Make step', self, shortcut='F7',
+                               triggered=self.make_step))
         data = [{'1': 2, '3': 4}, {'5': 6, '7': 8}]
         self.stacktrace_widget = StacktraceWidget(data)
         self.layout.addWidget(self.tab)
@@ -68,9 +77,9 @@ class Main(QMainWindow):
         menu = self.menuBar()
 
         # FILE MENU
-        file_menu = menu.addMenu('&File')
-        file_menu.addAction(QAction(QIcon('icons/open.svg'), '&Open FIle', self,
-                                    shortcut='Ctrl+O',
+        file_menu = menu.addMenu('Start debugging')
+        file_menu.addAction(QAction(QIcon('icons/open.svg'),
+                                    '&Start debugging', self,
                                     triggered=self._open_file))
         file_menu.addAction(
             QAction(QIcon('icons/power.svg'), '&Quit', self, shortcut='Ctrl+Q',
@@ -101,7 +110,14 @@ class Main(QMainWindow):
     def _quit(self):
         QCoreApplication.quit()
 
-    
+    def make_step(self):
+        pass
+
+    def continue_until_breakpoint(self):
+        pass
+
+    def start_debugging(self):
+        pass
 
 
 class Tab(QTabWidget):

@@ -28,111 +28,124 @@ class DebuggerState(Enum):
     Stopped = 2
 
 
-current_debugger_state = DebuggerState.Stopped
-current_debug_mode = DebugMode.StepMode
-breakpoints = dict()
-current_debug_interface = None
-current_program_frame = None
-current_stacktrace = None
+class Debugger:
+    def __init__(self):
+        self.current_debugger_state = DebuggerState.Stopped
+        self.current_debug_mode = DebugMode.StepMode
+        self.breakpoints = dict()
+        self.current_debug_interface = None
+        self.current_program_frame = None
+        self.current_stacktrace = None
 
+    def debug(self):
+        self.current_stacktrace = self.get_stacktrace()
+        self.current_program_frame = inspect.currentframe().f_back
+        if self.current_debug_mode == DebugMode.StepMode or\
+                self.should_stop_on_breakpoint():
+            self.current_debugger_state = DebuggerState.Stopped
+        while self.current_debugger_state == DebuggerState.Stopped:
+            self.current_debug_interface()
 
-def debug():
-    global current_program_frame, current_debugger_state, current_stacktrace
-    current_stacktrace = get_stacktrace()
-    current_program_frame = inspect.currentframe().f_back
-    if current_debug_mode == DebugMode.StepMode or should_stop_on_breakpoint():
-        current_debugger_state = DebuggerState.Stopped
-    while current_debugger_state == DebuggerState.Stopped:
-        current_debug_interface()
-
-
-def get_stacktrace():
-    stack = collections.deque()
-    current_frame = inspect.currentframe().f_back
-    stack.append(current_frame)
-    while current_frame.f_back is not None:
-        current_frame = current_frame.f_back
+    def get_stacktrace(self):
+        stack = collections.deque()
+        current_frame = self.current_program_frame
         stack.append(current_frame)
-    return stack
+        while current_frame.f_back is not None:
+            current_frame = current_frame.f_back
+            stack.append(current_frame)
+        return stack
 
+    def should_stop_on_breakpoint(self):
+        line_num = self.get_line_number()
+        filename = self.get_filename()
+        if line_num in self.breakpoints and\
+                filename in self.breakpoints[line_num]:
+            if self.breakpoints[line_num][filename].condition is not None:
+                try:
+                    return eval(self.breakpoints[line_num][filename].condition,
+                                *self.get_globals_and_locals())
+                except Exception:
+                    raise Exception  # What type of exception should I use?
+            return True
+        return False
 
-def should_stop_on_breakpoint():
-    line_num = get_line_number()
-    filename = get_filename()
-    if line_num in breakpoints and filename in breakpoints[line_num]:
-        if breakpoints[line_num][filename].condition is not None:
-            try:
-                return eval(breakpoints[line_num][filename].condition,
-                            *get_globals_and_locals())
-            except Exception:
-                raise Exception  # What type of exception should I use?
-        return True
-    return False
+    def get_code_context(self):
+        __, line_number, __, lines, __ = inspect.getframeinfo(
+            self.current_program_frame, 100000)  # I don't know how to
+        # force this func to return all lines
+        return lines, line_number
 
+    def get_globals_and_locals(self):
+        return (self.current_program_frame.f_globals,
+                self.current_program_frame.f_locals)
 
-def get_code_context():
-    __, line_number, __, lines, __ = inspect.getframeinfo(
-        current_program_frame, 100000)  # I don't know how to
-    # force this func to return all lines
-    return lines, line_number
+    def set_debug_mode(self, new_mode):
+        self.current_debug_mode = DebugMode(new_mode)
 
+    def get_debug_mode(self):
+        return self.current_debug_mode
 
-def get_globals_and_locals():
-    return current_program_frame.f_globals, current_program_frame.f_locals
+    def add_breakpoint(self, filename, line_number, condition=None):
+        if line_number not in self.breakpoints:
+            self.breakpoints[line_number] = dict()
+        if filename in self.breakpoints[line_number]:
+            raise LookupError
+        self.breakpoints[line_number][filename] = \
+            Breakpoint(filename, line_number, condition)
 
+    def remove_breakpoint(self, filename, line_number):
+        if line_number in self.breakpoints and\
+                filename in self.breakpoints[line_number]:
+            del self.breakpoints[line_number][filename]
+        else:
+            raise LookupError
 
-def set_debug_mode(new_mode):
-    global current_debug_mode
-    current_debug_mode = DebugMode(new_mode)
+    def get_all_breakpoints(self):
+        return self.breakpoints
 
+    def get_line_number(self):
+        return self.current_program_frame.f_lineno
 
-def get_debug_mode():
-    return current_debug_mode
+    def get_filename(self):
+        (filename, _, _, _, _) = \
+            inspect.getframeinfo(self.current_program_frame)
+        return filename
 
+    def modify_var(self, out_depth, modify_expression):
+        dicts = (self.current_stacktrace[out_depth].f_globals,
+                 self.current_stacktrace[out_depth].f_locals)
+        self.exec_code(modify_expression, dicts)
 
-def add_breakpoint(filename, line_number, condition=None):
-    if line_number not in breakpoints:
-        breakpoints[line_number] = dict()
-    if filename in breakpoints[line_number]:
-        raise LookupError
-    breakpoints[line_number][filename] = Breakpoint(filename, line_number,
-                                                    condition)
+    def exec_code(self, code, dicts=None):
+        if dicts is None:
+            dicts = self.get_globals_and_locals()
+        compiled_code = compile(code, "Debug Code", 'exec')
+        try:
+            exec(compiled_code, *dicts)
+        except Exception:
+            raise Exception  # What type of Exception should I use?
 
+    def continue_until_breakpoint(self):
+        self.current_debug_mode = DebugMode.BreakpointMode
+        self.current_debugger_state = DebuggerState.Running
 
-def remove_breakpoint(filename, line_number):
-    if line_number in breakpoints and filename in breakpoints[line_number]:
-        del breakpoints[line_number][filename]
-    else:
-        raise LookupError
+    def make_step(self):
+        self.current_debugger_state = DebuggerState.Running
+        self.current_debug_mode = DebugMode.StepMode
 
-
-def get_all_breakpoints():
-    return breakpoints
-
-
-def get_line_number():
-    return current_program_frame.f_lineno
-
-
-def get_filename():
-    (filename, _, _, _, _) = inspect.getframeinfo(current_program_frame)
-    return filename
-
-
-def modify_var(out_depth, modify_expression):
-    dicts = (current_stacktrace[out_depth].f_globals,
-             current_stacktrace[out_depth].f_locals)
-    exec_code(modify_expression, dicts)
-
-
-def exec_code(code, dicts=None):
-    if dicts is None:
-        dicts = get_globals_and_locals()
-    compiled_code = compile(code, "Debug Code", 'exec')
-    try:
-        exec(compiled_code, *dicts)
-    except Exception:
-        raise Exception  # What type of Exception should I use?
+    def start_debugging(self, debug_function, file, mode=DebugMode.StepMode):
+        self.current_debug_interface = debug_function
+        self.current_debug_mode = DebugMode(mode)
+        debuggerLoader.install_custom_loader(self.debug)
+        with open(file, 'r', encoding='utf8') as code:
+            compiled_code = compile(code.read(), file, 'exec')
+            modified_code = modify_code(compiled_code)
+        _globals = {
+            'debug': self.debug,
+            '__name__': '__main__',
+        }
+        with redirect_stdout(sys.stdout), redirect_stderr(sys.stderr):
+            exec(modified_code, _globals)
 
 
 def modify_code(file_code):
@@ -166,31 +179,3 @@ def modify_code(file_code):
     for instruction in modified_bytecode:
         file_bytecode.append(instruction)
     return file_bytecode.to_code()
-
-
-def continue_until_breakpoint():
-    global current_debugger_state, current_debug_mode
-    current_debug_mode = DebugMode.BreakpointMode
-    current_debugger_state = DebuggerState.Running
-
-
-def make_step():
-    global current_debugger_state, current_debug_mode
-    current_debugger_state = DebuggerState.Running
-    current_debug_mode = DebugMode.StepMode
-
-
-def start_debugging(debug_function, file, mode=DebugMode.StepMode):
-    global current_debug_interface, current_debug_mode
-    current_debug_interface = debug_function
-    current_debug_mode = DebugMode(mode)
-    debuggerLoader.install_custom_loader(debug)
-    with open(file, 'r', encoding='utf8') as code:
-        compiled_code = compile(code.read(), file, 'exec')
-        modified_code = modify_code(compiled_code)
-    _globals = {
-        'debug': debug,
-        '__name__': '__main__',
-    }
-    with redirect_stdout(sys.stdout), redirect_stderr(sys.stderr):
-        exec(modified_code, _globals)
