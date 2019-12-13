@@ -1,21 +1,25 @@
 from PyQt5.QtGui import QIcon, QStandardItem, QStandardItemModel, QTextCursor
 from PyQt5.QtWidgets import QMainWindow, QAction, QTabWidget, \
     QApplication, QFileDialog, QMessageBox, QWidget, \
-    QVBoxLayout, QTreeView, QInputDialog, QTextEdit, QHBoxLayout
-from core.editor import Editor
+    QVBoxLayout, QTreeView, QTextEdit, QHBoxLayout
+from core.editor import Editor, InputGUI
 import core.debugger as debugger
-from PyQt5.QtCore import QCoreApplication
+from PyQt5.QtCore import QCoreApplication, pyqtSignal
 import sys
 from io import StringIO
 import os
+from threading import Thread
 
 
 class Main(QMainWindow):
     """Class Main, contains following functions:
     UI Initialization, Menu Initialization"""
+    debug_function_handler = pyqtSignal(bool)
+    input_request_handler = pyqtSignal(bool)
 
     def __init__(self, parent=None):
         super(Main, self).__init__(parent)
+        self.debugger = debugger.Debugger()
         self.main_widget = QWidget(self)
         self.layout = QVBoxLayout(self.main_widget)
         self.main_widget.setLayout(self.layout)
@@ -47,16 +51,18 @@ class Main(QMainWindow):
         self.set_menu()
         self.toolbar = self.addToolBar('Debug actions')
         self.toolbar.addAction(QAction(QIcon('icons/info.svg'),
-                               'Start debugging', self, shortcut='F5',
-                               triggered=self.start_debugging))
+                                       'Start debugging', self, shortcut='F5',
+                                       triggered=self.start_debugging))
         self.toolbar.addAction(QAction(QIcon('icons/info.svg'),
-                               'Continue', self, shortcut='F8',
-                    triggered=self.continue_until_breakpoint))
+                                       'Continue', self, shortcut='F8',
+                                    triggered=self.continue_until_breakpoint))
         self.toolbar.addAction(QAction(QIcon('icons/info.svg'),
-                               'Make step', self, shortcut='F7',
-                               triggered=self.make_step))
-        data = [{'1': 2, '3': 4}, {'5': 6, '7': 8}]
-        self.stacktrace_widget = StacktraceWidget(data)
+                                       'Make step', self, shortcut='F7',
+                                       triggered=self.make_step))
+        self.toolbar.addAction(QAction(QIcon('icons/info.svg'),
+                                       'Exec code', self, shortcut='F1',
+                                       triggered=self.exec_code))
+        self.stacktrace_widget = StacktraceWidget()
         self.layout.addWidget(self.tab)
         self.sub_layout = QHBoxLayout()
         self.sub_layout.addWidget(self.stacktrace_widget)
@@ -64,10 +70,15 @@ class Main(QMainWindow):
         self.sub_layout.addWidget(self.output_widget)
         self.layout.addLayout(self.sub_layout)
         self.setCentralWidget(self.main_widget)
+        self.handled_debug_function = False
+        self.debug_function_handler.connect(self.highlight_current_line)
+        self.debug_function_handler.connect(self.show_stacktrace)
+        self.input = None
+        self.input_request_handler.connect(self.get_input)
 
     def set_window_ui(self):
         """UI Initialization"""
-        self.setWindowTitle("Veredit")
+        self.setWindowTitle("Python debugger")
         self.resize(1000, 500)
         self.setWindowIcon(QIcon('icons/veredit.ico'))
         self.showMaximized()
@@ -95,14 +106,18 @@ class Main(QMainWindow):
         """Open file and set it in a new tab or in current if tab is empty"""
         file = QFileDialog.getOpenFileName(self, 'Open file', ".")[0]
         if file:
-            if file not in self.tab.tab_container:
-                file_name = os.path.basename(file)
-                editor = Editor()
-                with open(file, 'r') as text:
-                    self.tab.addTab(editor, file_name)
-                    editor.setText(text.read())
-                self.tab.tab_container[file] = editor
-            self.tab.setCurrentWidget(self.tab.tab_container[file])
+            self.try_add_tab(file)
+
+    def try_add_tab(self, filename):
+        if filename not in self.tab.tab_container:
+            file_name = os.path.basename(filename)
+            editor = Editor(filename, self.add_breakpoint,
+                            self.remove_breakpoint)
+            with open(filename, 'r') as text:
+                self.tab.addTab(editor, file_name)
+                editor.setText(text.read())
+            self.tab.tab_container[filename] = editor
+        self.tab.setCurrentWidget(self.tab.tab_container[filename])
 
     def _about(self):
         QMessageBox.about(self, 'About Python Debugger', 'Some information')
@@ -111,13 +126,74 @@ class Main(QMainWindow):
         QCoreApplication.quit()
 
     def make_step(self):
-        pass
+        self.debugger.make_step()
+        self.handled_debug_function = False
 
     def continue_until_breakpoint(self):
-        pass
+        self.debugger.continue_until_breakpoint()
+        self.handled_debug_function = False
+
+    def highlight_current_line(self):
+        filename = self.debugger.get_filename()
+        line_num = self.debugger.get_line_number()
+        self.tab.currentWidget().clear_highlights()
+        self.try_add_tab(filename)
+        self.tab.currentWidget().setCursorPosition(line_num - 1, 0)
+        self.tab.currentWidget().set_line_highlight(line_num - 1)
+
+    def show_stacktrace(self):
+        self.stacktrace_widget.importData(self.debugger.current_stacktrace,
+                                          self.modify_vars)
+
+    def exec_code(self):
+        self.debugger.exec_code(InputGUI(self).readline())
+
+    def add_breakpoint(self, filename, line_num, condition):
+        self.debugger.add_breakpoint(filename, line_num, condition)
+
+    def modify_vars(self, key, depth, value):
+        self.debugger.modify_var(depth, key + " = " + value)
+
+    def remove_breakpoint(self, filename, line_num):
+        self.debugger.remove_breakpoint(filename, line_num)
+
+    def get_input(self):
+        self.input = InputGUI(self).readline()
 
     def start_debugging(self):
-        pass
+        self.debugger = debugger.Debugger()
+
+        t = Thread(target=self.debugger.start_debugging,
+                   args=(debug_function,
+                         self.get_current_tab_filename()),
+                   kwargs={'stdout': self.output_widget,
+                           'stderr': self.output_widget,
+                           'stdin': InputProvider()})
+        t.daemon = True
+        t.start()
+
+    def get_current_tab_filename(self):
+        current_widget = self.tab.currentWidget()
+        for filename, widget in self.tab.tab_container.items():
+            if current_widget == widget:
+                return filename
+        raise LookupError
+
+
+def debug_function():
+    if not gui_interface.handled_debug_function:
+        gui_interface.debug_function_handler.emit(True)
+        gui_interface.handled_debug_function = True
+
+
+class InputProvider:
+    def readline(self):
+        gui_interface.input_request_handler.emit(True)
+        while not gui_interface.input:
+            pass
+        received_input = gui_interface.input
+        gui_interface.input = None
+        return received_input
 
 
 class Tab(QTabWidget):
@@ -144,39 +220,43 @@ class Tab(QTabWidget):
 
 
 class StacktraceWidget(QWidget):
-    def __init__(self, data):
+    def __init__(self):
         super(QWidget, self).__init__()
         self.tree = QTreeView(self)
         layout = QVBoxLayout(self)
         layout.addWidget(self.tree)
         self.model = QStandardItemModel()
-        self.model.setHorizontalHeaderLabels(['Name', 'dbID'])
+        self.model.setHorizontalHeaderLabels(['Level', 'Values'])
         self.tree.header().setDefaultSectionSize(180)
         self.tree.setModel(self.model)
-        self.importData(data)
 
-    def importData(self, data):
+    def importData(self, data, signal_func):
         self.model.setRowCount(0)
         root = self.model.invisibleRootItem()
         for index, stack_values in enumerate(data):
             parent = QStandardItem(str(index + 1))
-            for key in stack_values.keys():
-                parent.appendRow([QStandardItem(str(key)),
-                                  QStandardItem(str(stack_values[key]))])
+            parent.setEditable(False)
+            for key, value in stack_values.f_locals.items():
+                keyWidget = QStandardItem(str(key))
+                keyWidget.setEditable(False)
+                valueWidget = ValueWidget(str(value), str(key), str(index))
+                # valueWidget.change_call.connect(signal_func) Doesn't work yet
+                parent.appendRow([keyWidget,
+                                  valueWidget])
             root.appendRow(parent)
 
 
-class InputGUI:
-    def __init__(self, parentWidget):
-        self.parentWidget = parentWidget
+class ValueWidget(QStandardItem):
+    change_call = pyqtSignal(object, object, object)
 
-    def readline(self):
-        text, ok = QInputDialog.getText(self.parentWidget, 'Introduce value',
-                                        'Value:')
-        if ok:
-            return str(text)
-        else:
-            return ''
+    def __init__(self, value, key, depth):
+        super(QStandardItem, self).__init__(value)
+        self.key = key
+        self.depth = depth
+
+    def setData(self, *args, **kwargs):
+        super(self).setData(*args, **kwargs)
+        self.change_call.emit(self.key, self.depth, self.data())
 
 
 class QDbgConsole(QTextEdit):
@@ -195,9 +275,11 @@ class QDbgConsole(QTextEdit):
 
 
 def main():
+    global gui_interface
     app = QApplication(sys.argv)
     window = Main()
 
+    gui_interface = window
     window.show()
     sys.exit(app.exec_())
 

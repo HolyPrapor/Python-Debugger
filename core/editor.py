@@ -1,5 +1,6 @@
 from PyQt5.Qsci import *
 from PyQt5.QtGui import QFont, QFontMetrics, QColor
+from PyQt5.QtWidgets import QInputDialog
 
 FONT_FAMILY = "Source Code Pro"
 BACKGROUND_COLOR = '#f8f8f8'
@@ -17,19 +18,16 @@ MARKER_FOREGROUND = "#676a6d"
 
 
 class Editor(QsciScintilla):
-    ARROW_MARKER_NUM = 8
+    BACKGROUND_MARKER_NUM = 8
+    BACKGROUND_BREAKPOINT_MARKER_NUM = 9
+    BREAKPOINT_MARKER_NUM = 10
 
-    def __init__(self, parent=None):
-        super(Editor, self).__init__(parent)
-
+    def __init__(self, filename, bp_add, bp_remove):
+        super(Editor, self).__init__(None)
+        self.filename = filename
+        self.bp_add = bp_add
+        self.bp_remove = bp_remove
         self.setReadOnly(True)
-
-        self.setMarginSensitivity(1, True)
-        self.marginClicked.connect(self.on_margin_clicked)
-        self.markerDefine(QsciScintilla.RightArrow,
-                          self.ARROW_MARKER_NUM)
-        self.setMarkerBackgroundColor(QColor("#ee1111"),
-                                      self.ARROW_MARKER_NUM)
 
         self.bgcolor = '#535353'
 
@@ -71,9 +69,10 @@ class Editor(QsciScintilla):
         # self.setEdgeColor(QColor(EDGE_COLOR))
 
         # CURRENT LINE
-        self.setCaretLineVisible(True)
-        self.setCaretLineBackgroundColor(QColor("#f8f8f8"))
-        self.setCaretForegroundColor(QColor("#535353"))
+        self.setCaretLineVisible(False)
+        self.setCaretLineBackgroundColor(QColor("#8f8fc3"))
+        self.setCaretForegroundColor(QColor("#0000ff"))
+
         # SELECTION BACKGROUND AND FOREGROUND
         self.setSelectionBackgroundColor(QColor(SEL_BACKGROUND))
         self.setSelectionForegroundColor(QColor(SEL_FOREGROUND))
@@ -103,7 +102,23 @@ class Editor(QsciScintilla):
         # FOLDING MARKERS BACKGROUND AND FOREGROUND
         self.setMarkerBackgroundColor(QColor(MARKER_BACKGROUND))
         self.setMarkerForegroundColor(QColor(MARGIN_FOREGROUND))
-        self.setFoldMarginColors(QColor(FOLD_MARGIN_BACKGROUND), QColor(FOLD_MARGIN_BACKGROUND))
+        self.setFoldMarginColors(QColor(FOLD_MARGIN_BACKGROUND),
+                                 QColor(FOLD_MARGIN_BACKGROUND))
+
+        self.setMarginSensitivity(1, True)
+        self.marginClicked.connect(self.on_margin_clicked)
+        self.markerDefine(QsciScintilla.SC_MARK_CIRCLE,
+                          self.BREAKPOINT_MARKER_NUM)
+        self.setMarkerBackgroundColor(QColor("#ee1111"),
+                                      self.BREAKPOINT_MARKER_NUM)
+        self.markerDefine(QsciScintilla.SC_MARK_BACKGROUND,
+                          self.BACKGROUND_BREAKPOINT_MARKER_NUM)
+        self.setMarkerBackgroundColor(QColor("#ec6861"),
+                                      self.BACKGROUND_BREAKPOINT_MARKER_NUM)
+        self.markerDefine(QsciScintilla.SC_MARK_BACKGROUND,
+                          self.BACKGROUND_MARKER_NUM)
+        self.setMarkerBackgroundColor(QColor("#acec61"),
+                                      self.BACKGROUND_MARKER_NUM)
 
         # FOLDING LINE DISABLE
         self.SendScintilla(QsciScintilla.SCI_SETFOLDFLAGS, 0)
@@ -126,12 +141,42 @@ class Editor(QsciScintilla):
         }
         """)
 
+        self.highlighted_lines = []
+
     def on_margin_clicked(self, nmargin, nline, modifiers):
         # Toggle marker for the line the margin was clicked on
         if self.markersAtLine(nline) != 0:
-            self.markerDelete(nline, self.ARROW_MARKER_NUM)
+            self.markerDelete(nline, self.BACKGROUND_BREAKPOINT_MARKER_NUM)
+            self.markerDelete(nline, self.BREAKPOINT_MARKER_NUM)
+            self.bp_remove(self.filename, nline + 1)
         else:
-            self.markerAdd(nline, self.ARROW_MARKER_NUM)
+            condition = InputGUI(self).readline()
+            if condition == '':
+                condition = None
+            self.markerAdd(nline, self.BACKGROUND_BREAKPOINT_MARKER_NUM)
+            self.markerAdd(nline, self.BREAKPOINT_MARKER_NUM)
+            self.bp_add(self.filename, nline + 1, condition)
+
+    def set_line_highlight(self, line_num):
+        self.markerAdd(line_num, self.BACKGROUND_MARKER_NUM)
+        self.highlighted_lines.append(line_num)
+
+    def clear_highlights(self):
+        for line in self.highlighted_lines:
+            self.markerDelete(line, self.BACKGROUND_MARKER_NUM)
 
     def __eq__(self, other):
         return id(self) == id(other)
+
+
+class InputGUI:
+    def __init__(self, parentWidget):
+        self.parentWidget = parentWidget
+
+    def readline(self):
+        text, ok = QInputDialog.getText(self.parentWidget, 'Introduce value',
+                                        'Value:')
+        if ok:
+            return str(text)
+        else:
+            return ''

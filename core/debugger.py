@@ -48,7 +48,7 @@ class Debugger:
 
     def get_stacktrace(self):
         stack = collections.deque()
-        current_frame = self.current_program_frame
+        current_frame = inspect.currentframe().f_back.f_back
         stack.append(current_frame)
         while current_frame.f_back is not None:
             current_frame = current_frame.f_back
@@ -133,7 +133,9 @@ class Debugger:
         self.current_debugger_state = DebuggerState.Running
         self.current_debug_mode = DebugMode.StepMode
 
-    def start_debugging(self, debug_function, file, mode=DebugMode.StepMode):
+    def start_debugging(self, debug_function, file, mode=DebugMode.StepMode,
+                        stdout=sys.stdout, stderr=sys.stderr,
+                        stdin=sys.stdin):
         self.current_debug_interface = debug_function
         self.current_debug_mode = DebugMode(mode)
         debuggerLoader.install_custom_loader(self.debug)
@@ -144,7 +146,8 @@ class Debugger:
             'debug': self.debug,
             '__name__': '__main__',
         }
-        with redirect_stdout(sys.stdout), redirect_stderr(sys.stderr):
+        with redirect_stdout(stdout), redirect_stderr(stderr):
+            sys.stdin = stdin
             exec(modified_code, _globals)
 
 
