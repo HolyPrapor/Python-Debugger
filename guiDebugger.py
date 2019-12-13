@@ -12,8 +12,6 @@ from threading import Thread
 
 
 class Main(QMainWindow):
-    """Class Main, contains following functions:
-    UI Initialization, Menu Initialization"""
     debug_function_handler = pyqtSignal(bool)
     input_request_handler = pyqtSignal(bool)
 
@@ -50,16 +48,16 @@ class Main(QMainWindow):
         self.set_window_ui()
         self.set_menu()
         self.toolbar = self.addToolBar('Debug actions')
-        self.toolbar.addAction(QAction(QIcon('icons/info.svg'),
+        self.toolbar.addAction(QAction(QIcon('icons/add.svg'),
                                        'Start debugging', self, shortcut='F5',
                                        triggered=self.start_debugging))
         self.toolbar.addAction(QAction(QIcon('icons/info.svg'),
                                        'Continue', self, shortcut='F8',
-                                    triggered=self.continue_until_breakpoint))
-        self.toolbar.addAction(QAction(QIcon('icons/info.svg'),
+                                       triggered=self.continue_until_breakpoint))
+        self.toolbar.addAction(QAction(QIcon('icons/redo.svg'),
                                        'Make step', self, shortcut='F7',
                                        triggered=self.make_step))
-        self.toolbar.addAction(QAction(QIcon('icons/info.svg'),
+        self.toolbar.addAction(QAction(QIcon('icons/code_file.svg'),
                                        'Exec code', self, shortcut='F1',
                                        triggered=self.exec_code))
         self.stacktrace_widget = StacktraceWidget()
@@ -75,6 +73,7 @@ class Main(QMainWindow):
         self.debug_function_handler.connect(self.show_stacktrace)
         self.input = None
         self.input_request_handler.connect(self.get_input)
+        self.active_debugger = False
 
     def set_window_ui(self):
         """UI Initialization"""
@@ -88,9 +87,9 @@ class Main(QMainWindow):
         menu = self.menuBar()
 
         # FILE MENU
-        file_menu = menu.addMenu('Start debugging')
+        file_menu = menu.addMenu('File')
         file_menu.addAction(QAction(QIcon('icons/open.svg'),
-                                    '&Start debugging', self,
+                                    '&Open', self,
                                     triggered=self._open_file))
         file_menu.addAction(
             QAction(QIcon('icons/power.svg'), '&Quit', self, shortcut='Ctrl+Q',
@@ -111,7 +110,7 @@ class Main(QMainWindow):
     def try_add_tab(self, filename):
         if filename not in self.tab.tab_container:
             file_name = os.path.basename(filename)
-            editor = Editor(filename, self.add_breakpoint,
+            editor = Editor(self, filename, self.add_breakpoint,
                             self.remove_breakpoint)
             with open(filename, 'r') as text:
                 self.tab.addTab(editor, file_name)
@@ -134,43 +133,59 @@ class Main(QMainWindow):
         self.handled_debug_function = False
 
     def highlight_current_line(self):
-        filename = self.debugger.get_filename()
-        line_num = self.debugger.get_line_number()
-        self.tab.currentWidget().clear_highlights()
-        self.try_add_tab(filename)
-        self.tab.currentWidget().setCursorPosition(line_num - 1, 0)
-        self.tab.currentWidget().set_line_highlight(line_num - 1)
+        if len(self.tab.tab_container) > 0:
+            filename = self.debugger.get_filename()
+            line_num = self.debugger.get_line_number()
+            self.tab.currentWidget().clear_highlights()
+            self.try_add_tab(filename)
+            self.tab.currentWidget().setCursorPosition(line_num - 1, 0)
+            self.tab.currentWidget().set_line_highlight(line_num - 1)
 
     def show_stacktrace(self):
-        self.stacktrace_widget.importData(self.debugger.current_stacktrace,
-                                          self.modify_vars)
+        if self.active_debugger:
+            self.stacktrace_widget.importData(self.debugger.current_stacktrace,
+                                              self.modify_vars)
 
     def exec_code(self):
-        self.debugger.exec_code(InputGUI(self).readline())
+        if self.active_debugger:
+            self.debugger.exec_code(InputGUI(self).readline())
 
     def add_breakpoint(self, filename, line_num, condition):
-        self.debugger.add_breakpoint(filename, line_num, condition)
+        if self.active_debugger:
+            self.debugger.add_breakpoint(filename, line_num, condition)
 
     def modify_vars(self, key, depth, value):
-        self.debugger.modify_var(depth, key + " = " + value)
+        if self.active_debugger:
+            self.debugger.modify_var(depth, key + " = " + value)
 
     def remove_breakpoint(self, filename, line_num):
-        self.debugger.remove_breakpoint(filename, line_num)
+        if self.active_debugger:
+            self.debugger.remove_breakpoint(filename, line_num)
 
     def get_input(self):
         self.input = InputGUI(self).readline()
 
-    def start_debugging(self):
-        self.debugger = debugger.Debugger()
+    def after_debug_func(self):
+        print("FINISHED!")
+        for i in range(len(self.tab.tab_container)):
+            self.tab.removeTab(0)
+        self.active_debugger = False
 
-        t = Thread(target=self.debugger.start_debugging,
-                   args=(debug_function,
-                         self.get_current_tab_filename()),
-                   kwargs={'stdout': self.output_widget,
-                           'stderr': self.output_widget,
-                           'stdin': InputProvider()})
-        t.daemon = True
-        t.start()
+    def start_debugging(self):
+        if len(self.tab.tab_container) > 0:
+            self.input = None
+            self.handled_debug_function = False
+            self.active_debugger = True
+            self.debugger = debugger.Debugger()
+            t = Thread(target=self.debugger.start_debugging,
+                       args=(debug_function,
+                             self.get_current_tab_filename()),
+                       kwargs={'stdout': self.output_widget,
+                               'stderr': self.output_widget,
+                               'stdin': InputProvider(),
+                               'after_debug_func': self.after_debug_func})
+            t.daemon = True
+            t.start()
 
     def get_current_tab_filename(self):
         current_widget = self.tab.currentWidget()
@@ -239,10 +254,10 @@ class StacktraceWidget(QWidget):
             for key, value in stack_values.f_locals.items():
                 keyWidget = QStandardItem(str(key))
                 keyWidget.setEditable(False)
-                valueWidget = ValueWidget(str(value), str(key), str(index))
+                # valueWidget = ValueWidget(str(value), str(key), str(index))
                 # valueWidget.change_call.connect(signal_func) Doesn't work yet
                 parent.appendRow([keyWidget,
-                                  valueWidget])
+                                  QStandardItem(str(value))])
             root.appendRow(parent)
 
 

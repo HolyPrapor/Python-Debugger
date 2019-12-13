@@ -34,3 +34,7 @@ def install_custom_loader(debug_function):
     sys.path_hooks.insert(0, FileFinder.path_hook(loader_details))
     sys.path_importer_cache.clear()
     invalidate_caches()
+
+
+def remove_custom_loader():
+    del sys.path_hooks[0]

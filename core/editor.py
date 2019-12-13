@@ -22,8 +22,9 @@ class Editor(QsciScintilla):
     BACKGROUND_BREAKPOINT_MARKER_NUM = 9
     BREAKPOINT_MARKER_NUM = 10
 
-    def __init__(self, filename, bp_add, bp_remove):
+    def __init__(self, parent, filename, bp_add, bp_remove):
         super(Editor, self).__init__(None)
+        self.par = parent
         self.filename = filename
         self.bp_add = bp_add
         self.bp_remove = bp_remove
@@ -145,11 +146,11 @@ class Editor(QsciScintilla):
 
     def on_margin_clicked(self, nmargin, nline, modifiers):
         # Toggle marker for the line the margin was clicked on
-        if self.markersAtLine(nline) != 0:
+        if self.markersAtLine(nline) > 1:
             self.markerDelete(nline, self.BACKGROUND_BREAKPOINT_MARKER_NUM)
             self.markerDelete(nline, self.BREAKPOINT_MARKER_NUM)
             self.bp_remove(self.filename, nline + 1)
-        else:
+        elif self.par.active_debugger:
             condition = InputGUI(self).readline()
             if condition == '':
                 condition = None
@@ -158,8 +159,9 @@ class Editor(QsciScintilla):
             self.bp_add(self.filename, nline + 1, condition)
 
     def set_line_highlight(self, line_num):
-        self.markerAdd(line_num, self.BACKGROUND_MARKER_NUM)
-        self.highlighted_lines.append(line_num)
+        if line_num not in self.highlighted_lines:
+            self.markerAdd(line_num, self.BACKGROUND_MARKER_NUM)
+            self.highlighted_lines.append(line_num)
 
     def clear_highlights(self):
         for line in self.highlighted_lines:

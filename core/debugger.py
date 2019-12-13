@@ -97,8 +97,8 @@ class Debugger:
         if line_number in self.breakpoints and\
                 filename in self.breakpoints[line_number]:
             del self.breakpoints[line_number][filename]
-        else:
-            raise LookupError
+        # else:
+        #    raise LookupError
 
     def get_all_breakpoints(self):
         return self.breakpoints
@@ -135,7 +135,8 @@ class Debugger:
 
     def start_debugging(self, debug_function, file, mode=DebugMode.StepMode,
                         stdout=sys.stdout, stderr=sys.stderr,
-                        stdin=sys.stdin):
+                        stdin=sys.stdin,
+                        after_debug_func=None):
         self.current_debug_interface = debug_function
         self.current_debug_mode = DebugMode(mode)
         debuggerLoader.install_custom_loader(self.debug)
@@ -149,6 +150,9 @@ class Debugger:
         with redirect_stdout(stdout), redirect_stderr(stderr):
             sys.stdin = stdin
             exec(modified_code, _globals)
+            if after_debug_func:
+                after_debug_func()
+        debuggerLoader.remove_custom_loader()
 
 
 def modify_code(file_code):
