@@ -28,8 +28,8 @@ def show_context():
     """Show context
     Shows current frame context"""
     context, current_line = debugger.get_code_context()
-    context[current_line - 1] = context[current_line - 1].rstrip() \
-                                + "   < ----- Current line"
+    context[current_line - 1] = context[current_line - 1].rstrip(
+    ) + "   < ----- Current line"
     for index, line in enumerate(context):
         print(str(index + 1) + " : " + line)
 
