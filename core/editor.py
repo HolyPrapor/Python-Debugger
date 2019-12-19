@@ -1,19 +1,20 @@
 from PyQt5.Qsci import *
+from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont, QFontMetrics, QColor
 from PyQt5.QtWidgets import QInputDialog
 
 FONT_FAMILY = "Source Code Pro"
 BACKGROUND_COLOR = '#f8f8f8'
 FOREGROUND_COLOR = '#535353'
-MARGIN_BACKGROUND = "#2b2b2b" # "#313335"
+MARGIN_BACKGROUND = "#2b2b2b"  # "#313335"
 MARGIN_FOREGROUND = "#676a6d"
-FOLD_MARGIN_BACKGROUND = "#2b2b2b" # "#313335"
+FOLD_MARGIN_BACKGROUND = "#2b2b2b"  # "#313335"
 EDGE_COLOR = "#BBB8B5"
-SEL_BACKGROUND = "#535353" # "#606060"
+SEL_BACKGROUND = "#535353"  # "#606060"
 SEL_FOREGROUND = "#222222"
 IND_BACKGROUND = "#676a6d"
 IND_FOREGROUND = "#676a6d"
-MARKER_BACKGROUND = "#2b2b2b" # "#313335"
+MARKER_BACKGROUND = "#2b2b2b"  # "#313335"
 MARKER_FOREGROUND = "#676a6d"
 
 
@@ -94,7 +95,7 @@ class Editor(QsciScintilla):
 
         # FOLDING MARGIN
         self.setFolding(QsciScintilla.PlainFoldStyle)
-        self.setMarginWidth(2, 20) # (2,14)
+        self.setMarginWidth(2, 20)  # (2,14)
         # FOLDING MARKERS
         self.markerDefine("V", QsciScintilla.SC_MARKNUM_FOLDEROPEN)
         self.markerDefine(">", QsciScintilla.SC_MARKNUM_FOLDER)
@@ -151,9 +152,9 @@ class Editor(QsciScintilla):
             self.markerDelete(nline, self.BREAKPOINT_MARKER_NUM)
             self.bp_remove(self.filename, nline + 1)
         elif self.par.active_debugger:
-            condition = InputGUI(self).readline()
-            if condition == '':
-                condition = None
+            condition = None
+            if modifiers & Qt.ShiftModifier:
+                condition = QConditionInputDialog(self).readline()
             self.markerAdd(nline, self.BACKGROUND_BREAKPOINT_MARKER_NUM)
             self.markerAdd(nline, self.BREAKPOINT_MARKER_NUM)
             self.bp_add(self.filename, nline + 1, condition)
@@ -172,14 +173,14 @@ class Editor(QsciScintilla):
         return id(self) == id(other)
 
 
-class InputGUI:
+class QConditionInputDialog:
     def __init__(self, parentWidget):
         self.parentWidget = parentWidget
 
     def readline(self):
-        text, ok = QInputDialog.getText(self.parentWidget, 'Introduce value',
-                                        'Value:')
+        text, ok = QInputDialog.getText(self.parentWidget, 'Set condition',
+                                        'Condition:')
         if ok:
             return str(text)
         else:
-            return ''
+            return None

@@ -3,7 +3,7 @@ from PyQt5.QtGui import QIcon, QStandardItem, QStandardItemModel, QTextCursor, \
 from PyQt5.QtWidgets import QMainWindow, QAction, QTabWidget, \
     QApplication, QFileDialog, QMessageBox, QWidget, \
     QVBoxLayout, QTreeView, QTextEdit, QHBoxLayout
-from core.editor import Editor, InputGUI
+from core.editor import Editor, QConditionInputDialog
 import core.debugger as debugger
 from PyQt5.QtCore import QCoreApplication, pyqtSignal
 import sys
@@ -158,10 +158,11 @@ class GuiDebugger(QMainWindow):
         if len(self.tab.tab_container) > 0:
             filename = self.debugger.get_filename()
             line_num = self.debugger.get_line_number()
-            self.tab.currentWidget().clear_highlights()
-            self.try_add_tab(filename)
-            self.tab.currentWidget().setCursorPosition(line_num - 1, 0)
-            self.tab.currentWidget().set_line_highlight(line_num - 1)
+            if self.tab.currentWidget() is not None:
+                self.tab.currentWidget().clear_highlights()
+                self.try_add_tab(filename)
+                self.tab.currentWidget().setCursorPosition(line_num - 1, 0)
+                self.tab.currentWidget().set_line_highlight(line_num - 1)
 
     def show_stacktrace(self):
         if self.active_debugger:
@@ -170,7 +171,7 @@ class GuiDebugger(QMainWindow):
 
     def exec_code(self):
         if self.active_debugger:
-            self.debugger.exec_code(InputGUI(self).readline())
+            self.debugger.exec_code(QConditionInputDialog(self).readline())
 
     def add_breakpoint(self, filename, line_num, condition):
         if self.active_debugger:
@@ -185,7 +186,7 @@ class GuiDebugger(QMainWindow):
             self.debugger.remove_breakpoint(filename, line_num)
 
     def get_input(self):
-        self.input = InputGUI(self).readline()
+        self.input = QConditionInputDialog(self).readline()
 
     def after_debug_func(self):
         print("Program finished.")
@@ -197,7 +198,7 @@ class GuiDebugger(QMainWindow):
         self.active_debugger = False
 
     def start_debugging(self):
-        if len(self.tab.tab_container) > 0:
+        if len(self.tab.tab_container) > 0 and not self.active_debugger:
             self.input = None
             self.handled_debug_function = False
             self.active_debugger = True

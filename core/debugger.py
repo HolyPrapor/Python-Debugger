@@ -5,6 +5,7 @@ from enum import Enum
 from contextlib import redirect_stdout, redirect_stderr
 import core.debuggerLoader as debuggerLoader
 import sys
+import traceback
 
 
 class Breakpoint:
@@ -122,8 +123,9 @@ class Debugger:
         compiled_code = compile(code, "Debug Code", 'exec')
         try:
             exec(compiled_code, *dicts)
-        except Exception:
-            raise Exception  # What type of Exception should I use?
+        except:
+            print("Exception caught", file=sys.stderr)
+            print(sys.exc_info(), file=sys.stderr)
 
     def continue_until_breakpoint(self):
         self.current_debug_mode = DebugMode.BreakpointMode
@@ -140,7 +142,7 @@ class Debugger:
         self.current_debug_interface = debug_function
         self.current_debug_mode = DebugMode(mode)
         debuggerLoader.install_custom_loader(self.debug)
-        with open(file, 'r', encoding='utf8') as code:
+        with open(file, 'r') as code:
             compiled_code = compile(code.read(), file, 'exec')
             modified_code = modify_code(compiled_code)
         _globals = {
@@ -152,7 +154,7 @@ class Debugger:
             try:
                 exec(modified_code, _globals)
             except:
-                pass
+                traceback.print_exc(file=sys.stderr)
             if after_debug_func:
                 after_debug_func()
         debuggerLoader.remove_custom_loader()
