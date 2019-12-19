@@ -18,9 +18,9 @@ MARKER_FOREGROUND = "#676a6d"
 
 
 class Editor(QsciScintilla):
-    BACKGROUND_MARKER_NUM = 8
+    BACKGROUND_MARKER_NUM = 10
     BACKGROUND_BREAKPOINT_MARKER_NUM = 9
-    BREAKPOINT_MARKER_NUM = 10
+    BREAKPOINT_MARKER_NUM = 8
 
     def __init__(self, parent, filename, bp_add, bp_remove):
         super(Editor, self).__init__(None)
@@ -166,6 +166,7 @@ class Editor(QsciScintilla):
     def clear_highlights(self):
         for line in self.highlighted_lines:
             self.markerDelete(line, self.BACKGROUND_MARKER_NUM)
+        self.highlighted_lines.clear()
 
     def __eq__(self, other):
         return id(self) == id(other)

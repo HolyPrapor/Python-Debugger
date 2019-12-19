@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="640" height="480" xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg">
+ <title>media</title>
+ <defs>
+  <filter id="filter3316">
+   <feGaussianBlur id="feGaussianBlur3318" stdDeviation="0.586716"/>
+  </filter>
+ </defs>
+ <g>
+  <title>Layer 1</title>
+  <g id="g3368">
+   <path d="m502.89502,252.49991a148.01482,140.61356 0 1 1 -296.02924,0a148.01482,140.61356 0 1 1 296.02924,0z" filter="url(#filter3316)" stroke-dashoffset="0" stroke-miterlimit="4" stroke="#000000" fill-rule="evenodd" fill="#5fbf00" id="svg_11"/>
+   <path d="m458.93677,253.00176l-82.23816,43.34642l-82.23816,43.34652l0.31345,-87.19479l0.31643,-87.19467l81.92188,43.84829l81.92456,43.84822l0,0.00001z" stroke-opacity="0.182573" stroke-dashoffset="0" stroke-miterlimit="4" stroke="#ffffff" fill-rule="evenodd" fill="#e6e6e6" id="svg_12"/>
+   <path d="m353.55209,114.8327c-79.44534,0.00014 -143.94816,63.01905 -143.94816,140.63778c127.90645,-27.47612 159.05751,-27.83858 287.81187,0c0,-77.61873 -64.41812,-140.63778 -143.86371,-140.63778z" stroke-opacity="0.182573" stroke-dashoffset="0" stroke-miterlimit="4" stroke="#000000" fill-rule="evenodd" fill="#ffffff" opacity="0.5" id="svg_13"/>
+  </g>
+ </g>
+</svg>

@@ -81,18 +81,21 @@ class GuiDebugger(QMainWindow):
 
     def setup_toolbar(self):
         self.toolbar = self.addToolBar('Debug actions')
-        self.toolbar.addAction(QAction(QIcon('icons/add.svg'),
-                                       'Start debugging', self, shortcut='F5',
+        self.toolbar.addAction(QAction(QIcon('icons/start-debug-icon.svg'),
+                                       'Start debugging', self,
                                        triggered=self.start_debugging))
-        self.toolbar.addAction(QAction(QIcon('icons/info.svg'),
+        self.toolbar.addAction(QAction(QIcon('icons/continue-icon.svg'),
                                        'Continue', self, shortcut='F8',
                                        triggered=self.continue_until_breakpoint))
-        self.toolbar.addAction(QAction(QIcon('icons/redo.svg'),
+        self.toolbar.addAction(QAction(QIcon('icons/step-in-icon.svg'),
                                        'Make step', self, shortcut='F7',
                                        triggered=self.make_step))
-        self.toolbar.addAction(QAction(QIcon('icons/code_file.svg'),
+        self.toolbar.addAction(QAction(QIcon('icons/exec-code-icon.svg'),
                                        'Exec code', self, shortcut='F1',
                                        triggered=self.exec_code))
+        self.toolbar.addAction(QAction(QIcon('icons/stop-debug-icon.svg'),
+                                       'Stop debug', self,
+                                       triggered=self.stop_debug))
 
     def set_window_ui(self):
         """UI Initialization"""
@@ -186,6 +189,9 @@ class GuiDebugger(QMainWindow):
 
     def after_debug_func(self):
         print("Program finished.")
+        self.stop_debug()
+
+    def stop_debug(self):
         for i in range(len(self.tab.tab_container)):
             self.tab.removeTab(0)
         self.active_debugger = False
