@@ -149,7 +149,10 @@ class Debugger:
         }
         with redirect_stdout(stdout), redirect_stderr(stderr):
             sys.stdin = stdin
-            exec(modified_code, _globals)
+            try:
+                exec(modified_code, _globals)
+            except:
+                pass
             if after_debug_func:
                 after_debug_func()
         debuggerLoader.remove_custom_loader()
@@ -173,7 +176,8 @@ def modify_code(file_code):
                     Instr('POP_TOP',
                           lineno=current_line))
             if instruction.name == "LOAD_CONST" \
-                    and type(instruction.arg) == type(file_code):
+                    and type(instruction.arg) == type(file_code) \
+                    and is_source_available(instruction.arg):
                 modified_bytecode.append(
                     Instr('LOAD_CONST',
                           modify_code(instruction.arg),
@@ -186,3 +190,11 @@ def modify_code(file_code):
     for instruction in modified_bytecode:
         file_bytecode.append(instruction)
     return file_bytecode.to_code()
+
+
+def is_source_available(function):
+    try:
+        inspect.getsource(function)
+        return True
+    except OSError:
+        return False

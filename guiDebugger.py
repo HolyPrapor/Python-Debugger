@@ -1,4 +1,5 @@
-from PyQt5.QtGui import QIcon, QStandardItem, QStandardItemModel, QTextCursor
+from PyQt5.QtGui import QIcon, QStandardItem, QStandardItemModel, QTextCursor, \
+    QColor
 from PyQt5.QtWidgets import QMainWindow, QAction, QTabWidget, \
     QApplication, QFileDialog, QMessageBox, QWidget, \
     QVBoxLayout, QTreeView, QTextEdit, QHBoxLayout
@@ -6,22 +7,54 @@ from core.editor import Editor, InputGUI
 import core.debugger as debugger
 from PyQt5.QtCore import QCoreApplication, pyqtSignal
 import sys
-from io import StringIO
 import os
 from threading import Thread
 
 
-class Main(QMainWindow):
+STDOUT_COLOR = QColor(0, 0, 0)
+STDERR_COLOR = QColor(255, 0, 0)
+
+
+class GuiDebugger(QMainWindow):
     debug_function_handler = pyqtSignal(bool)
     input_request_handler = pyqtSignal(bool)
+    output_request_handler = pyqtSignal(str, QColor)
+    error_request_handler = pyqtSignal(str, QColor)
 
     def __init__(self, parent=None):
-        super(Main, self).__init__(parent)
+        super(GuiDebugger, self).__init__(parent)
         self.debugger = debugger.Debugger()
         self.main_widget = QWidget(self)
         self.layout = QVBoxLayout(self.main_widget)
+        self.tab = TabWidget()
+        self.stacktrace_widget = StacktraceWidget()
+        self.output_widget = QDbgConsole()
+        self.sub_layout = QHBoxLayout()
+        self.stdout = OutputProvider(STDOUT_COLOR)
+        self.stderr = OutputProvider(STDERR_COLOR)
+        self.setup_tab_widget()
+        self.set_window_ui()
+        self.set_menu()
+        self.setup_toolbar()
         self.main_widget.setLayout(self.layout)
-        self.tab = Tab()
+        self.sub_layout.addWidget(self.stacktrace_widget)
+        self.sub_layout.addWidget(self.output_widget)
+        self.layout.addWidget(self.tab)
+        self.layout.addLayout(self.sub_layout)
+        self.setCentralWidget(self.main_widget)
+        self.handled_debug_function = False
+        self.input = None
+        self.active_debugger = False
+        self.setup_signals()
+
+    def setup_signals(self):
+        self.debug_function_handler.connect(self.highlight_current_line)
+        self.debug_function_handler.connect(self.show_stacktrace)
+        self.input_request_handler.connect(self.get_input)
+        self.output_request_handler.connect(self.write_to_stdout)
+        self.error_request_handler.connect(self.write_to_stdout)
+
+    def setup_tab_widget(self):
         self.tab.setStyleSheet("""
         QTabWidget::pane {background: #272727;}
         QTabWidget::tab-bar:top {top: 1px;}
@@ -45,8 +78,8 @@ class Main(QMainWindow):
             image: url(icons/close.svg)
         }
         """)
-        self.set_window_ui()
-        self.set_menu()
+
+    def setup_toolbar(self):
         self.toolbar = self.addToolBar('Debug actions')
         self.toolbar.addAction(QAction(QIcon('icons/add.svg'),
                                        'Start debugging', self, shortcut='F5',
@@ -60,20 +93,6 @@ class Main(QMainWindow):
         self.toolbar.addAction(QAction(QIcon('icons/code_file.svg'),
                                        'Exec code', self, shortcut='F1',
                                        triggered=self.exec_code))
-        self.stacktrace_widget = StacktraceWidget()
-        self.layout.addWidget(self.tab)
-        self.sub_layout = QHBoxLayout()
-        self.sub_layout.addWidget(self.stacktrace_widget)
-        self.output_widget = QDbgConsole()
-        self.sub_layout.addWidget(self.output_widget)
-        self.layout.addLayout(self.sub_layout)
-        self.setCentralWidget(self.main_widget)
-        self.handled_debug_function = False
-        self.debug_function_handler.connect(self.highlight_current_line)
-        self.debug_function_handler.connect(self.show_stacktrace)
-        self.input = None
-        self.input_request_handler.connect(self.get_input)
-        self.active_debugger = False
 
     def set_window_ui(self):
         """UI Initialization"""
@@ -166,7 +185,7 @@ class Main(QMainWindow):
         self.input = InputGUI(self).readline()
 
     def after_debug_func(self):
-        print("FINISHED!")
+        print("Program finished.")
         for i in range(len(self.tab.tab_container)):
             self.tab.removeTab(0)
         self.active_debugger = False
@@ -180,8 +199,8 @@ class Main(QMainWindow):
             t = Thread(target=self.debugger.start_debugging,
                        args=(debug_function,
                              self.get_current_tab_filename()),
-                       kwargs={'stdout': self.output_widget,
-                               'stderr': self.output_widget,
+                       kwargs={'stdout': self.stdout,
+                               'stderr': self.stderr,
                                'stdin': InputProvider(),
                                'after_debug_func': self.after_debug_func})
             t.daemon = True
@@ -194,9 +213,12 @@ class Main(QMainWindow):
                 return filename
         raise LookupError
 
+    def write_to_stdout(self, message, color):
+        self.output_widget.write_with_color(message, color)
+
 
 def debug_function():
-    if not gui_interface.handled_debug_function:
+    if not gui_interface.handled_debug_function:  # Dont send signals every time
         gui_interface.debug_function_handler.emit(True)
         gui_interface.handled_debug_function = True
 
@@ -211,11 +233,19 @@ class InputProvider:
         return received_input
 
 
-class Tab(QTabWidget):
+class OutputProvider:
+    def __init__(self, color:QColor):
+        self.color = color
+
+    def write(self, msg):
+        gui_interface.output_request_handler.emit(msg, self.color)
+
+
+class TabWidget(QTabWidget):
     count = 0
 
     def __init__(self):
-        super(Tab, self).__init__()
+        super(TabWidget, self).__init__()
         self.setTabsClosable(True)
         self.setMovable(True)
         self.tabCloseRequested.connect(self.removeTab)
@@ -224,14 +254,14 @@ class Tab(QTabWidget):
         self.tab_container = dict()
 
     def addTab(self, widget, filename):
-        super(Tab, self).addTab(widget, filename)
+        super(TabWidget, self).addTab(widget, filename)
 
     def removeTab(self, index):
-        tab_to_remove = super(Tab, self).widget(index)
+        tab_to_remove = super(TabWidget, self).widget(index)
         self.tab_container = {filename: tab for filename, tab
                               in self.tab_container.items()
                               if tab != tab_to_remove}
-        super(Tab, self).removeTab(index)
+        super(TabWidget, self).removeTab(index)
 
 
 class StacktraceWidget(QWidget):
@@ -277,22 +307,20 @@ class ValueWidget(QStandardItem):
 class QDbgConsole(QTextEdit):
     def __init__(self, parent=None):
         super(QDbgConsole, self).__init__(parent)
-        self._buffer = StringIO()
         self.setReadOnly(True)
 
-    def write(self, msg):
+    def write_with_color(self, msg, color):
+        previous_color = self.textColor()
+        self.setTextColor(color)
         self.insertPlainText(msg)
+        self.setTextColor(previous_color)
         self.moveCursor(QTextCursor.End)
-        self._buffer.write(msg)
-
-    def __getattr__(self, attr):
-        return getattr(self._buffer, attr)
 
 
 def main():
     global gui_interface
     app = QApplication(sys.argv)
-    window = Main()
+    window = GuiDebugger()
 
     gui_interface = window
     window.show()

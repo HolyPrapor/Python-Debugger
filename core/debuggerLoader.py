@@ -1,6 +1,6 @@
 from importlib import invalidate_caches
 from importlib.abc import Loader
-from importlib.machinery import FileFinder
+from importlib.machinery import FileFinder, SourceFileLoader
 import sys
 import core.debugger as debugger
 
@@ -16,15 +16,17 @@ class DebugLoader(Loader):
         return None
 
     def exec_module(self, module):
-        with open(module.__file__, encoding='utf8') as f:
-            data = f.read()
-        compiled_code = compile(data, module.__file__, 'exec')
-        modified_code = debugger.modify_code(compiled_code)
-        _globals = vars(module)
-        _globals['debug'] = debug
-        _globals['__name__'] = '__main__'
-        exec(modified_code, _globals)  # if globals[debug] = self.debug
-        # ... ? if compile filename is not exact ?
+        if not debugger.is_source_available(module):
+            SourceFileLoader.exec_module(module)
+        else:
+            with open(module.__file__, encoding='utf8') as f:
+                data = f.read()
+            compiled_code = compile(data, module.__file__, 'exec')
+            modified_code = debugger.modify_code(compiled_code)
+            _globals = vars(module)
+            _globals['debug'] = debug
+            _globals['__name__'] = '__main__'
+            exec(modified_code, _globals)
 
 
 def install_custom_loader(debug_function):
