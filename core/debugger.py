@@ -33,6 +33,7 @@ class Debugger:
     def __init__(self):
         self.current_debugger_state = DebuggerState.Stopped
         self.current_debug_mode = DebugMode.StepMode
+        self.step_over_filename = None
         self.breakpoints = dict()
         self.current_debug_interface = None
         self.current_program_frame = None
@@ -44,8 +45,10 @@ class Debugger:
         if self.current_debug_mode == DebugMode.StepMode or\
                 self.should_stop_on_breakpoint():
             self.current_debugger_state = DebuggerState.Stopped
-        while self.current_debugger_state == DebuggerState.Stopped:
+        if self.current_debugger_state == DebuggerState.Stopped:
             self.current_debug_interface()
+        while self.current_debugger_state == DebuggerState.Stopped:
+            pass
 
     def get_stacktrace(self):
         stack = collections.deque()
@@ -59,14 +62,18 @@ class Debugger:
     def should_stop_on_breakpoint(self):
         line_num = self.get_line_number()
         filename = self.get_filename()
+        if self.step_over_filename == filename:
+            self.step_over_filename = None
+            return True
         if line_num in self.breakpoints and\
                 filename in self.breakpoints[line_num]:
             if self.breakpoints[line_num][filename].condition is not None:
                 try:
                     return eval(self.breakpoints[line_num][filename].condition,
                                 *self.get_globals_and_locals())
-                except Exception:
-                    raise Exception  # What type of exception should I use?
+                except:
+                    print("Condition was wrong. Stopping.", file=sys.stderr)
+                    return True
             return True
         return False
 
@@ -135,6 +142,11 @@ class Debugger:
         self.current_debugger_state = DebuggerState.Running
         self.current_debug_mode = DebugMode.StepMode
 
+    def step_over(self):
+        self.step_over_filename = self.get_filename()
+        self.current_debug_mode = DebugMode.BreakpointMode
+        self.current_debugger_state = DebuggerState.Running
+
     def start_debugging(self, debug_function, file, mode=DebugMode.StepMode,
                         stdout=sys.stdout, stderr=sys.stderr,
                         stdin=sys.stdin,
@@ -157,33 +169,33 @@ class Debugger:
                 traceback.print_exc(file=sys.stderr)
             if after_debug_func:
                 after_debug_func()
-        debuggerLoader.remove_custom_loader()
+        debuggerLoader.remove_custom_loader_and_invalidate_caches()
 
 
 def modify_code(file_code):
     file_bytecode = Bytecode.from_code(file_code)
-    current_line = -1
+    modified_lines = []
     modified_bytecode = []
     for instruction in file_bytecode:
         if hasattr(instruction, "lineno"):
-            if current_line != instruction.lineno:
-                current_line = instruction.lineno
+            if instruction.lineno not in modified_lines:
+                modified_lines.append(instruction.lineno)
                 modified_bytecode.append(
                     Instr('LOAD_GLOBAL', 'debug',
-                          lineno=current_line), )
+                          lineno=instruction.lineno), )
                 modified_bytecode.append(
                     Instr('CALL_FUNCTION', 0,
-                          lineno=current_line))
+                          lineno=instruction.lineno))
                 modified_bytecode.append(
                     Instr('POP_TOP',
-                          lineno=current_line))
+                          lineno=instruction.lineno))
             if instruction.name == "LOAD_CONST" \
                     and type(instruction.arg) == type(file_code) \
                     and is_source_available(instruction.arg):
                 modified_bytecode.append(
                     Instr('LOAD_CONST',
                           modify_code(instruction.arg),
-                          lineno=current_line))
+                          lineno=instruction.lineno))
             else:
                 modified_bytecode.append(instruction)
         else:

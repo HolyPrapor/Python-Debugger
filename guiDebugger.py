@@ -3,21 +3,20 @@ from PyQt5.QtGui import QIcon, QStandardItem, QStandardItemModel, QTextCursor, \
 from PyQt5.QtWidgets import QMainWindow, QAction, QTabWidget, \
     QApplication, QFileDialog, QMessageBox, QWidget, \
     QVBoxLayout, QTreeView, QTextEdit, QHBoxLayout
-from core.editor import Editor, QConditionInputDialog
+from core.editor import Editor, QConditionInputDialog, BACKGROUND_COLOR
 import core.debugger as debugger
 from PyQt5.QtCore import QCoreApplication, pyqtSignal
 import sys
 import os
 from threading import Thread
 
-
-STDOUT_COLOR = QColor(0, 0, 0)
+STDOUT_COLOR = QColor(255, 255, 255)
 STDERR_COLOR = QColor(255, 0, 0)
-
+RUNNING_BG_COLOR = QColor(120, 115, 130)
 
 class GuiDebugger(QMainWindow):
-    debug_function_handler = pyqtSignal(bool)
     input_request_handler = pyqtSignal(bool)
+    debug_function_handler = pyqtSignal(str, int)
     output_request_handler = pyqtSignal(str, QColor)
     error_request_handler = pyqtSignal(str, QColor)
 
@@ -42,7 +41,6 @@ class GuiDebugger(QMainWindow):
         self.layout.addWidget(self.tab)
         self.layout.addLayout(self.sub_layout)
         self.setCentralWidget(self.main_widget)
-        self.handled_debug_function = False
         self.input = None
         self.active_debugger = False
         self.setup_signals()
@@ -90,6 +88,9 @@ class GuiDebugger(QMainWindow):
         self.toolbar.addAction(QAction(QIcon('icons/step-in-icon.svg'),
                                        'Make step', self, shortcut='F7',
                                        triggered=self.make_step))
+        self.toolbar.addAction(QAction(QIcon('icons/step-over-icon.svg'),
+                                       'Step over', self,
+                                       triggered=self.step_over))
         self.toolbar.addAction(QAction(QIcon('icons/exec-code-icon.svg'),
                                        'Exec code', self, shortcut='F1',
                                        triggered=self.exec_code))
@@ -148,23 +149,32 @@ class GuiDebugger(QMainWindow):
 
     def make_step(self):
         self.debugger.make_step()
-        self.handled_debug_function = False
+        self.set_bg_color(RUNNING_BG_COLOR)
+
+    def step_over(self):
+        self.debugger.step_over()
+        self.set_bg_color(RUNNING_BG_COLOR)
 
     def continue_until_breakpoint(self):
         self.debugger.continue_until_breakpoint()
-        self.handled_debug_function = False
+        self.set_bg_color(RUNNING_BG_COLOR)
 
-    def highlight_current_line(self):
+    def highlight_current_line(self,filename, line_number):
         if len(self.tab.tab_container) > 0:
-            filename = self.debugger.get_filename()
-            line_num = self.debugger.get_line_number()
             if self.tab.currentWidget() is not None:
+                self.set_bg_color(QColor(BACKGROUND_COLOR))
                 self.tab.currentWidget().clear_highlights()
                 self.try_add_tab(filename)
-                self.tab.currentWidget().setCursorPosition(line_num - 1, 0)
-                self.tab.currentWidget().set_line_highlight(line_num - 1)
+                self.tab.currentWidget().setCursorPosition(
+                    line_number - 1, 0)
+                self.tab.currentWidget().set_line_highlight(line_number - 1)
 
-    def show_stacktrace(self):
+    def set_bg_color(self, qcolor):
+        if self.tab.currentWidget() is not None:
+            self.tab.currentWidget().clear_highlights()
+            self.tab.currentWidget().setPaper(qcolor)
+
+    def show_stacktrace(self, *args):
         if self.active_debugger:
             self.stacktrace_widget.importData(self.debugger.current_stacktrace,
                                               self.modify_vars)
@@ -200,7 +210,6 @@ class GuiDebugger(QMainWindow):
     def start_debugging(self):
         if len(self.tab.tab_container) > 0 and not self.active_debugger:
             self.input = None
-            self.handled_debug_function = False
             self.active_debugger = True
             self.debugger = debugger.Debugger()
             t = Thread(target=self.debugger.start_debugging,
@@ -225,9 +234,9 @@ class GuiDebugger(QMainWindow):
 
 
 def debug_function():
-    if not gui_interface.handled_debug_function:  # Dont send signals every time
-        gui_interface.debug_function_handler.emit(True)
-        gui_interface.handled_debug_function = True
+    gui_interface.debug_function_handler.emit(
+        gui_interface.debugger.get_filename(),
+        gui_interface.debugger.get_line_number())
 
 
 class InputProvider:
@@ -241,7 +250,7 @@ class InputProvider:
 
 
 class OutputProvider:
-    def __init__(self, color:QColor):
+    def __init__(self, color: QColor):
         self.color = color
 
     def write(self, msg):

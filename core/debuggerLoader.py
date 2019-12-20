@@ -1,3 +1,4 @@
+from importlib import invalidate_caches
 import importlib.util
 from importlib.abc import Loader, MetaPathFinder
 import sys
@@ -8,6 +9,14 @@ debug = None
 
 
 class DebugFinder(MetaPathFinder):
+    def __init__(self):
+        self.loaded_modules = []
+
+    def invalidate_caches(self):
+        for module in self.loaded_modules:
+            if module in sys.modules:
+                del sys.modules[module]
+
     def find_spec(self, fullname, path, target=None):
         if path is None or path == "":
             path = [os.getcwd()]
@@ -24,6 +33,8 @@ class DebugFinder(MetaPathFinder):
                 submodule_locations = None
             if not os.path.exists(filename):
                 continue
+
+            self.loaded_modules.append(fullname)
 
             return importlib.util.spec_from_file_location(
                 fullname, filename,
@@ -58,5 +69,6 @@ def install_custom_loader(debug_function):
     sys.meta_path.insert(0, DebugFinder())
 
 
-def remove_custom_loader():
+def remove_custom_loader_and_invalidate_caches():
+    invalidate_caches()
     del sys.meta_path[0]
