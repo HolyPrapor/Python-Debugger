@@ -18,6 +18,9 @@ class Breakpoint:
         return (self.filename, self.line_number, self.condition) == \
                (other.filename, other.line_number, other.condition)
 
+    def __hash__(self):
+        return hash((self.filename, self.line_number, self.condition))
+
 
 class DebugMode(Enum):
     StepMode = 1

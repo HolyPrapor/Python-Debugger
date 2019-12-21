@@ -2,6 +2,7 @@ from PyQt5.Qsci import *
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont, QFontMetrics, QColor
 from PyQt5.QtWidgets import QInputDialog
+from core.debugger import Breakpoint
 
 FONT_FAMILY = "Source Code Pro"
 BACKGROUND_COLOR = '#f8f8f8'
@@ -27,10 +28,9 @@ class Editor(QsciScintilla):
         super(Editor, self).__init__(None)
         self.par = parent
         self.filename = filename
+        self.setReadOnly(True)
         self.bp_add = bp_add
         self.bp_remove = bp_remove
-        self.setReadOnly(True)
-
         self.bgcolor = '#535353'
 
         # FONT
@@ -142,21 +142,24 @@ class Editor(QsciScintilla):
              font-size: 10px !important;
         }
         """)
-
         self.highlighted_lines = []
+        self.breakpoints = set()
 
     def on_margin_clicked(self, nmargin, nline, modifiers):
         # Toggle marker for the line the margin was clicked on
         if self.markersAtLine(nline) > 1:
             self.markerDelete(nline, self.BACKGROUND_BREAKPOINT_MARKER_NUM)
             self.markerDelete(nline, self.BREAKPOINT_MARKER_NUM)
+            self.breakpoints.remove(Breakpoint(self.filename, nline + 1))
             self.bp_remove(self.filename, nline + 1)
-        elif self.par.active_debugger:
+        else:
             condition = None
             if modifiers & Qt.ShiftModifier:
                 condition = QConditionInputDialog(self).readline()
             self.markerAdd(nline, self.BACKGROUND_BREAKPOINT_MARKER_NUM)
             self.markerAdd(nline, self.BREAKPOINT_MARKER_NUM)
+            bp = Breakpoint(self.filename, nline + 1, condition)
+            self.breakpoints.add(bp)
             self.bp_add(self.filename, nline + 1, condition)
 
     def set_line_highlight(self, line_num):

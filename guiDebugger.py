@@ -173,9 +173,10 @@ class GuiDebugger(QMainWindow):
                 self.tab.currentWidget().set_line_highlight(line_number - 1)
 
     def set_bg_color(self, qcolor):
-        if self.tab.currentWidget() is not None:
-            self.tab.currentWidget().clear_highlights()
-            self.tab.currentWidget().setPaper(qcolor)
+        for index in range(len(self.tab.tab_container)):
+            widget = self.tab.widget(index)
+            widget.clear_highlights()
+            widget.setPaper(qcolor)
 
     def show_stacktrace(self, *args):
         if self.active_debugger:
@@ -201,20 +202,37 @@ class GuiDebugger(QMainWindow):
     def get_input(self):
         self.input = QConditionInputDialog(self).readline()
 
+    def set_breakpoints_from_tabs(self):
+        if self.active_debugger:
+            for index in range(len(self.tab.tab_container)):
+                widget = self.tab.widget(index)
+                for bp in widget.breakpoints:
+                    self.debugger.add_breakpoint(bp.filename, bp.line_number,
+                                                 bp.condition)
+
     def after_debug_func(self):
         print("Program finished.")
         self.stop_debug()
 
-    def stop_debug(self):
+    def clear_tabs(self):
         for i in range(len(self.tab.tab_container)):
             self.tab.removeTab(0)
+
+    def stop_debug(self):
+        for index in range(len(self.tab.tab_container)):
+            widget = self.tab.widget(index)
+            widget.clear_highlights()
+            widget.setPaper(QColor(BACKGROUND_COLOR))
+
         self.active_debugger = False
+        self.debugger = None
 
     def start_debugging(self):
         if len(self.tab.tab_container) > 0 and not self.active_debugger:
             self.input = None
             self.active_debugger = True
             self.debugger = debugger.Debugger()
+            self.set_breakpoints_from_tabs()
             t = Thread(target=self.debugger.start_debugging,
                        args=(debug_function,
                              self.get_current_tab_filename()),
