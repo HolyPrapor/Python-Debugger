@@ -38,6 +38,7 @@ class Debugger:
         self.current_debug_interface = None
         self.current_program_frame = None
         self.current_stacktrace = None
+        self.start_stacktrace_len = 0
 
     def debug(self):
         self.current_stacktrace = self.get_stacktrace()
@@ -57,7 +58,17 @@ class Debugger:
         while current_frame.f_back is not None:
             current_frame = current_frame.f_back
             stack.append(current_frame)
+        remove_last_n_from(stack, self.start_stacktrace_len)
         return stack
+
+    def get_start_stacktrace_len(self):
+        counter = 0
+        current_frame = inspect.currentframe().f_back
+        counter += 1
+        while current_frame.f_back is not None:
+            current_frame = current_frame.f_back
+            counter += 1
+        return counter
 
     def should_stop_on_breakpoint(self):
         line_num = self.get_line_number()
@@ -161,6 +172,7 @@ class Debugger:
             'debug': self.debug,
             '__name__': '__main__',
         }
+        self.start_stacktrace_len = self.get_start_stacktrace_len()
         with redirect_stdout(stdout), redirect_stderr(stderr):
             sys.stdin = stdin
             try:
@@ -212,3 +224,8 @@ def is_source_available(function):
         return True
     except OSError:
         return False
+
+
+def remove_last_n_from(stack, n):
+    for i in range(n):
+        stack.pop()

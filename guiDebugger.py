@@ -9,10 +9,13 @@ from PyQt5.QtCore import QCoreApplication, pyqtSignal
 import sys
 import os
 from threading import Thread
+import inspect
+import types
 
 STDOUT_COLOR = QColor(255, 255, 255)
 STDERR_COLOR = QColor(255, 0, 0)
 RUNNING_BG_COLOR = QColor(120, 115, 130)
+
 
 class GuiDebugger(QMainWindow):
     input_request_handler = pyqtSignal(bool)
@@ -159,7 +162,7 @@ class GuiDebugger(QMainWindow):
         self.debugger.continue_until_breakpoint()
         self.set_bg_color(RUNNING_BG_COLOR)
 
-    def highlight_current_line(self,filename, line_number):
+    def highlight_current_line(self, filename, line_number):
         if len(self.tab.tab_container) > 0:
             if self.tab.currentWidget() is not None:
                 self.set_bg_color(QColor(BACKGROUND_COLOR))
@@ -294,8 +297,11 @@ class StacktraceWidget(QWidget):
     def importData(self, data, signal_func):
         self.model.setRowCount(0)
         root = self.model.invisibleRootItem()
-        for index, stack_values in enumerate(data):
-            parent = QStandardItem(str(index + 1))
+        for stack_values in data:
+            parent = QStandardItem(
+                str(stack_values.f_code.co_name) +
+                str(inspect.signature(
+                    types.FunctionType(stack_values.f_code, {}))))
             parent.setEditable(False)
             for key, value in stack_values.f_locals.items():
                 keyWidget = QStandardItem(str(key))
