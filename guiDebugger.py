@@ -151,16 +151,19 @@ class GuiDebugger(QMainWindow):
         QCoreApplication.quit()
 
     def make_step(self):
-        self.debugger.make_step()
-        self.set_bg_color(RUNNING_BG_COLOR)
+        if self.active_debugger:
+            self.debugger.make_step()
+            self.set_bg_color(RUNNING_BG_COLOR)
 
     def step_over(self):
-        self.debugger.step_over()
-        self.set_bg_color(RUNNING_BG_COLOR)
+        if self.active_debugger:
+            self.debugger.step_over()
+            self.set_bg_color(RUNNING_BG_COLOR)
 
     def continue_until_breakpoint(self):
-        self.debugger.continue_until_breakpoint()
-        self.set_bg_color(RUNNING_BG_COLOR)
+        if self.active_debugger:
+            self.debugger.continue_until_breakpoint()
+            self.set_bg_color(RUNNING_BG_COLOR)
 
     def highlight_current_line(self, filename, line_number):
         if len(self.tab.tab_container) > 0:
