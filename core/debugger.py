@@ -33,11 +33,11 @@ class Debugger:
     def __init__(self):
         self.current_debugger_state = DebuggerState.Stopped
         self.current_debug_mode = DebugMode.StepMode
-        self.step_over_filename = None
         self.breakpoints = dict()
         self.current_debug_interface = None
         self.current_program_frame = None
         self.current_stacktrace = None
+        self.step_over_marker = []
         self.start_stacktrace_len = 0
 
     def debug(self):
@@ -73,8 +73,9 @@ class Debugger:
     def should_stop_on_breakpoint(self):
         line_num = self.get_line_number()
         filename = self.get_filename()
-        if self.step_over_filename == filename:
-            self.step_over_filename = None
+        function_name = self.get_function_name()
+        if (filename, function_name) in self.step_over_marker:
+            self.step_over_marker = []
             return True
         if line_num in self.breakpoints and\
                 filename in self.breakpoints[line_num]:
@@ -125,6 +126,9 @@ class Debugger:
     def get_line_number(self):
         return self.current_program_frame.f_lineno
 
+    def get_function_name(self):
+        return get_function_name_from_frame(self.current_program_frame)
+
     def get_filename(self):
         (filename, _, _, _, _) = \
             inspect.getframeinfo(self.current_program_frame)
@@ -154,7 +158,12 @@ class Debugger:
         self.current_debug_mode = DebugMode.StepMode
 
     def step_over(self):
-        self.step_over_filename = self.get_filename()
+        self.step_over_marker = [(self.get_filename(),
+                                  self.get_function_name())]
+        if len(self.current_stacktrace) > 1:
+            (prev_filename, __, prev_function_name, __, __) = \
+                inspect.getframeinfo(self.current_stacktrace[1])
+            self.step_over_marker.append((prev_filename, prev_function_name))
         self.current_debug_mode = DebugMode.BreakpointMode
         self.current_debugger_state = DebuggerState.Running
 
@@ -229,3 +238,7 @@ def is_source_available(function):
 def remove_last_n_from(stack, n):
     for i in range(n):
         stack.pop()
+
+
+def get_function_name_from_frame(frame):
+    return frame.f_code.co_name
