@@ -6,6 +6,7 @@ from PyQt5.QtWidgets import QMainWindow, QAction, QTabWidget, \
 from core.editor import Editor, QConditionInputDialog, BACKGROUND_COLOR
 import core.debugger as debugger
 from PyQt5.QtCore import QCoreApplication, pyqtSignal
+from PyQt5.QtCore import Qt
 import sys
 import os
 from threading import Thread
@@ -29,7 +30,7 @@ class GuiDebugger(QMainWindow):
         self.main_widget = QWidget(self)
         self.layout = QVBoxLayout(self.main_widget)
         self.tab = TabWidget()
-        self.stacktrace_widget = StacktraceWidget()
+        self.stacktrace_widget = StacktraceWidget(self)
         self.output_widget = QDbgConsole()
         self.sub_layout = QHBoxLayout()
         self.stdout = OutputProvider(STDOUT_COLOR)
@@ -181,14 +182,14 @@ class GuiDebugger(QMainWindow):
             widget.clear_highlights()
             widget.setPaper(qcolor)
 
-    def show_stacktrace(self, *args):
+    def show_stacktrace(self):
         if self.active_debugger:
-            self.stacktrace_widget.importData(self.debugger.current_stacktrace,
-                                              self.modify_vars)
+            self.stacktrace_widget.importData(self.debugger.current_stacktrace)
 
     def exec_code(self):
         if self.active_debugger:
             self.debugger.exec_code(QConditionInputDialog(self).readline())
+            self.show_stacktrace()
 
     def add_breakpoint(self, filename, line_num, condition):
         if self.active_debugger:
@@ -197,6 +198,7 @@ class GuiDebugger(QMainWindow):
     def modify_vars(self, key, depth, value):
         if self.active_debugger:
             self.debugger.modify_var(depth, key + " = " + value)
+            self.show_stacktrace()
 
     def remove_breakpoint(self, filename, line_num):
         if self.active_debugger:
@@ -305,8 +307,9 @@ class TabWidget(QTabWidget):
 
 
 class StacktraceWidget(QWidget):
-    def __init__(self):
+    def __init__(self, parent):
         super(QWidget, self).__init__()
+        self.parent = parent
         self.tree = QTreeView(self)
         layout = QVBoxLayout(self)
         layout.addWidget(self.tree)
@@ -315,10 +318,10 @@ class StacktraceWidget(QWidget):
         self.tree.header().setDefaultSectionSize(180)
         self.tree.setModel(self.model)
 
-    def importData(self, data, signal_func):
+    def importData(self, data):
         self.model.setRowCount(0)
         root = self.model.invisibleRootItem()
-        for stack_values in data:
+        for index, stack_values in enumerate(data):
             parent = QStandardItem(
                 str(stack_values.f_code.co_name) +
                 str(inspect.signature(
@@ -327,24 +330,23 @@ class StacktraceWidget(QWidget):
             for key, value in stack_values.f_locals.items():
                 keyWidget = QStandardItem(str(key))
                 keyWidget.setEditable(False)
-                # valueWidget = ValueWidget(str(value), str(key), str(index))
-                # valueWidget.change_call.connect(signal_func) Doesn't work yet
+                valueWidget = ValueWidget(self.parent,
+                                          str(value), str(key), str(index))
                 parent.appendRow([keyWidget,
-                                  QStandardItem(str(value))])
+                                  valueWidget])
             root.appendRow(parent)
 
 
 class ValueWidget(QStandardItem):
-    change_call = pyqtSignal(object, object, object)
-
-    def __init__(self, value, key, depth):
+    def __init__(self, global_parent, value, key, depth):
         super(QStandardItem, self).__init__(value)
+        self.global_parent = global_parent
         self.key = key
         self.depth = depth
 
-    def setData(self, *args, **kwargs):
-        super(self).setData(*args, **kwargs)
-        self.change_call.emit(self.key, self.depth, self.data())
+    def setData(self, value, role):
+        super().setData(value, role)
+        self.global_parent.modify_vars(self.key, int(self.depth), value)
 
 
 class QDbgConsole(QTextEdit):
