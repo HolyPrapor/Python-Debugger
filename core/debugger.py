@@ -196,7 +196,9 @@ class Debugger:
             try:
                 exec(modified_code, _globals)
             except:
-                traceback.print_exc(file=sys.stderr)
+                # print(traceback.format_exc(), file=sys.stderr) fails on
+                # windows for no reason????
+                print(sys.exc_info())
             self.stop_debug()
 
     def stop_debug(self):

@@ -18,8 +18,8 @@ class DebugFinder(MetaPathFinder):
     def find_spec(self, fullname, path, target=None):
         if path is None or path == "":
             path = [os.getcwd()]
-            #for entry in sys.path:
-             #   path.append(entry)
+            for entry in sys.path:
+                path.append(entry)
         if "." in fullname:
             *parents, name = fullname.split(".")
         else:

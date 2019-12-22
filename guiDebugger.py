@@ -417,7 +417,6 @@ def main():
 
     gui_interface = window
     window.show()
-    print(sys.path)
     sys.exit(app.exec_())
 
 
