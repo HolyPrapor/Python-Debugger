@@ -85,22 +85,22 @@ class GuiDebugger(QMainWindow):
     def setup_toolbar(self):
         self.toolbar = self.addToolBar('Debug actions')
         self.toolbar.addAction(QAction(QIcon('icons/start-debug-icon.svg'),
-                                       'Start debugging', self,
+                                       'Start debugging', self, shortcut='F5',
                                        triggered=self.start_debugging))
         self.toolbar.addAction(QAction(QIcon('icons/continue-icon.svg'),
-                                       'Continue', self, shortcut='F8',
+                                       'Continue', self, shortcut='F9',
                                        triggered=self.continue_until_breakpoint))
         self.toolbar.addAction(QAction(QIcon('icons/step-in-icon.svg'),
-                                       'Make step', self, shortcut='F7',
+                                       'Step in', self, shortcut='F7',
                                        triggered=self.make_step))
         self.toolbar.addAction(QAction(QIcon('icons/step-over-icon.svg'),
-                                       'Step over', self,
+                                       'Step over', self, shortcut='F8',
                                        triggered=self.step_over))
         self.toolbar.addAction(QAction(QIcon('icons/exec-code-icon.svg'),
                                        'Exec code', self, shortcut='F1',
                                        triggered=self.exec_code))
         self.toolbar.addAction(QAction(QIcon('icons/stop-debug-icon.svg'),
-                                       'Stop debug', self,
+                                       'Stop debug', self, shortcut='F3',
                                        triggered=self.stop_debug))
 
     def set_window_ui(self):
@@ -117,7 +117,7 @@ class GuiDebugger(QMainWindow):
         # FILE MENU
         file_menu = menu.addMenu('File')
         file_menu.addAction(QAction(QIcon('icons/open.svg'),
-                                    '&Open', self,
+                                    '&Open', self, shortcut='Ctrl+O',
                                     triggered=self._open_file))
         file_menu.addAction(
             QAction(QIcon('icons/power.svg'), '&Quit', self, shortcut='Ctrl+Q',
