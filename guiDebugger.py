@@ -2,16 +2,16 @@ from PyQt5.QtGui import QIcon, QStandardItem, QStandardItemModel, QTextCursor, \
     QColor
 from PyQt5.QtWidgets import QMainWindow, QAction, QTabWidget, \
     QApplication, QFileDialog, QMessageBox, QWidget, \
-    QVBoxLayout, QTreeView, QTextEdit, QHBoxLayout
-from core.editor import Editor, QConditionInputDialog, BACKGROUND_COLOR
+    QVBoxLayout, QTreeView, QTextEdit, QHBoxLayout, QInputDialog
+from core.editor import Editor, BACKGROUND_COLOR
 import core.debugger as debugger
 from PyQt5.QtCore import QCoreApplication, pyqtSignal
-from PyQt5.QtCore import Qt
 import sys
 import os
 from threading import Thread
 import inspect
 import types
+import collections
 
 STDOUT_COLOR = QColor(255, 255, 255)
 STDERR_COLOR = QColor(255, 0, 0)
@@ -45,7 +45,8 @@ class GuiDebugger(QMainWindow):
         self.layout.addWidget(self.tab)
         self.layout.addLayout(self.sub_layout)
         self.setCentralWidget(self.main_widget)
-        self.input = None
+        self.input = collections.deque()
+        self.providing_input = False
         self.active_debugger = False
         self.setup_signals()
 
@@ -188,7 +189,9 @@ class GuiDebugger(QMainWindow):
 
     def exec_code(self):
         if self.active_debugger:
-            self.debugger.exec_code(QConditionInputDialog(self).readline())
+            self.debugger.exec_code(
+                QBigInputDialog(self, "Exec code",
+                                "Write your code to launch:").readline())
             self.show_stacktrace()
 
     def add_breakpoint(self, filename, line_num, condition):
@@ -205,7 +208,15 @@ class GuiDebugger(QMainWindow):
             self.debugger.remove_breakpoint(filename, line_num)
 
     def get_input(self):
-        self.input = QConditionInputDialog(self).readline()
+        while len(self.input) == 0 and not self.providing_input:
+            self.providing_input = True
+            lines = QBigInputDialog(self,
+                                    "Input dialog",
+                                    "Write your input").readlines()
+            if lines:
+                for line in lines.split():
+                    self.input.append(line)
+            self.providing_input = False
 
     def set_breakpoints_from_tabs(self):
         if self.active_debugger:
@@ -234,7 +245,8 @@ class GuiDebugger(QMainWindow):
 
     def start_debugging(self):
         if len(self.tab.tab_container) > 0 and not self.active_debugger:
-            self.input = None
+            self.input = collections.deque()
+            self.providing_input = False
             self.active_debugger = True
             self.debugger = debugger.Debugger()
             self.set_breakpoints_from_tabs()
@@ -267,11 +279,11 @@ def debug_function():
 
 class InputProvider:
     def readline(self):
-        gui_interface.input_request_handler.emit(True)
-        while not gui_interface.input:
+        if len(gui_interface.input) == 0 and not gui_interface.providing_input:
+            gui_interface.input_request_handler.emit(True)
+        while len(gui_interface.input) == 0:
             pass
-        received_input = gui_interface.input
-        gui_interface.input = None
+        received_input = gui_interface.input.popleft()
         return received_input
 
 
@@ -360,6 +372,22 @@ class QDbgConsole(QTextEdit):
         self.insertPlainText(msg)
         self.setTextColor(previous_color)
         self.moveCursor(QTextCursor.End)
+
+
+class QBigInputDialog():
+    def __init__(self, parentWidget, title, label):
+        self.parentWidget = parentWidget
+        self.title = title
+        self.label = label
+
+    def readlines(self):
+        text, ok = QInputDialog.getMultiLineText(self.parentWidget,
+                                                 self.title,
+                                                 self.label)
+        if ok:
+            return str(text)
+        else:
+            return ''
 
 
 def main():
