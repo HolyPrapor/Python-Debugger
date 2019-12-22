@@ -241,21 +241,22 @@ class GuiDebugger(QMainWindow):
                                                  bp.condition)
 
     def after_debug_func(self):
-        print("Program finished.")
-        self.stop_debug()
+        if self.active_debugger:
+            print("Program finished.")
+            self.stop_debug()
 
     def clear_tabs(self):
         for i in range(len(self.tab.tab_container)):
             self.tab.removeTab(0)
 
     def stop_debug(self):
+        self.active_debugger = False
         for index in range(len(self.tab.tab_container)):
             widget = self.tab.widget(index)
             widget.clear_highlights()
             widget.setPaper(QColor(BACKGROUND_COLOR))
         if self.debugger:
             self.debugger.stop_debug()
-        self.active_debugger = False
         self.debugger = None
 
     def start_debugging(self):
