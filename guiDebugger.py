@@ -191,7 +191,7 @@ class GuiDebugger(QMainWindow):
         if self.active_debugger:
             self.debugger.exec_code(
                 QBigInputDialog(self, "Exec code",
-                                "Write your code to launch:").readline())
+                                "Write your code to launch:").readlines())
             self.show_stacktrace()
 
     def add_breakpoint(self, filename, line_num, condition):
