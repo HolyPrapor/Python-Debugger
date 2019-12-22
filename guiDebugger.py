@@ -358,8 +358,12 @@ class StacktraceWidget(QWidget):
             for key, value in stack_values.f_locals.items():
                 keyWidget = QStandardItem(str(key))
                 keyWidget.setEditable(False)
+                try:
+                    value_as_str = str(value)
+                except:
+                    value_as_str = "Can't see"
                 valueWidget = ValueWidget(self.parent,
-                                          str(value), str(key), str(index))
+                                          value_as_str, str(key), str(index))
                 parent.appendRow([keyWidget,
                                   valueWidget])
             root.appendRow(parent)
@@ -413,6 +417,7 @@ def main():
 
     gui_interface = window
     window.show()
+    print(sys.path)
     sys.exit(app.exec_())
 
 

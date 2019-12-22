@@ -18,8 +18,8 @@ class DebugFinder(MetaPathFinder):
     def find_spec(self, fullname, path, target=None):
         if path is None or path == "":
             path = [os.getcwd()]
-            for entry in sys.path:
-                path.append(entry)
+            #for entry in sys.path:
+             #   path.append(entry)
         if "." in fullname:
             *parents, name = fullname.split(".")
         else:
@@ -56,13 +56,16 @@ class DebugLoader(Loader):
         if not debugger.is_source_available(module):
             pass
         else:
-            with open(module.__file__, encoding='utf8') as f:
+            with open(module.__file__, 'r') as f:
                 data = f.read()
             compiled_code = compile(data, module.__file__, 'exec')
             modified_code = debugger.modify_code(compiled_code)
             _globals = vars(module)
             _globals['debug'] = DebugLoader.debug
-            exec(modified_code, _globals)
+            try:
+                exec(modified_code, _globals)
+            except:
+                print(sys.exc_info(), file=sys.stderr)
 
 
 def install_custom_loader(debug_function):
