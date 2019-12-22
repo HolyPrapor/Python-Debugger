@@ -1,19 +1,22 @@
 # Python Debugger
-Version 0.1
+Version 1.0
 
 Author: Tzoop Ilya (tolya12345w@gmail.com)
 
 
 ## Description
-This application is developing for debugging python programs.
+This application was created for debugging python programs.
 
 
 ## Requirements
 * Installed "bytecode" module
+* Installed "PyQT5" module
+* Installed "qscintilla" module
 
 
 ## Structure
-* Console version: `consoleInterface.py`
+* Console version: `consoleDebugger.py` # NOT RECOMMENDEDED TO USE
+* GUI version: `guiDebugger.py`
 
 
 ## Console version
@@ -26,6 +29,16 @@ Launch example: `./consoleDebugger.py testProgramsToDebug/calculate.py`
 * `command list` — Show list of commands
 * `Number of command "COMMAND" in command list` — Launch "COMMAND"
 
+## GUI version
+Help: Ctrl + I 
+
+### Usage
+
+* All information located on the help page.
+
 
 ## Implementation details
-UNDER DEVELOPMENT
+This python debugger uses bytecode module to insert debug fuction on every line. This means, that on each line your debug function is executed. Then we use different python modules to get information about stacktrace, code context, current line. 
+Import modules works through custom import module. Additional information can be gathered in source files.
+
+GUI uses PyQT5 as main engine, and Qscintilla for code editor widget.
