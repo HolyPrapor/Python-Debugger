@@ -89,7 +89,8 @@ class GuiDebugger(QMainWindow):
                                        triggered=self.start_debugging))
         self.toolbar.addAction(QAction(QIcon('icons/continue-icon.svg'),
                                        'Continue', self, shortcut='F9',
-                                       triggered=self.continue_until_breakpoint))
+                                       triggered=self.continue_until_breakpoint)
+                               )
         self.toolbar.addAction(QAction(QIcon('icons/step-in-icon.svg'),
                                        'Step in', self, shortcut='F7',
                                        triggered=self.make_step))
