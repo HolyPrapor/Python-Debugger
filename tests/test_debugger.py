@@ -21,10 +21,10 @@ def print_lines_to_file(lines, filename):
 
 
 class DebuggerTests(unittest.TestCase):
-    def tearDown(self):
-        if len(sys.path_hooks) > sys_path_hooks_init_len:
-            del sys.path_hooks[0]
-            importlib.reload(debugger)
+    debugger = None
+
+    def setUp(self):
+        DebuggerTests.debugger = debugger.Debugger()
 
     def test_breakpoint_non_conditional_breakpoint_stops_where_expected(self):
         current_program_state = 0
@@ -38,18 +38,18 @@ class DebuggerTests(unittest.TestCase):
                 nonlocal current_program_state
                 current_program_state += 1
                 if current_program_state == 1:
-                    debugger.add_breakpoint(tempfiles[0].name, 2)
-                    debugger.continue_until_breakpoint()
+                    self.debugger.add_breakpoint(tempfiles[0].name, 2)
+                    self.debugger.continue_until_breakpoint()
                 elif current_program_state == 2:
-                    self.assertEqual(debugger.get_line_number(), 2)
-                    debugger.add_breakpoint(tempfiles[0].name, 4)
-                    debugger.continue_until_breakpoint()
+                    self.assertEqual(self.debugger.get_line_number(), 2)
+                    self.debugger.add_breakpoint(tempfiles[0].name, 4)
+                    self.debugger.continue_until_breakpoint()
                 elif current_program_state == 3:
-                    self.assertEqual(debugger.get_line_number(), 4)
-                    debugger.continue_until_breakpoint()
+                    self.assertEqual(self.debugger.get_line_number(), 4)
+                    self.debugger.continue_until_breakpoint()
 
-            debugger.start_debugging(machine, tempfiles[0].name,
-                                     debugger.DebugMode.StepMode)
+            self.debugger.start_debugging(machine, tempfiles[0].name,
+                                          debugger.DebugMode.StepMode)
 
     def test_breakpoint_remove_works_correctly(self):
         current_program_state = 0
@@ -63,16 +63,16 @@ class DebuggerTests(unittest.TestCase):
                 nonlocal current_program_state
                 current_program_state += 1
                 if current_program_state == 1:
-                    debugger.add_breakpoint(tempfiles[0].name, 2)
-                    debugger.add_breakpoint(tempfiles[0].name, 4)
-                    debugger.remove_breakpoint(tempfiles[0].name, 2)
-                    debugger.continue_until_breakpoint()
+                    self.debugger.add_breakpoint(tempfiles[0].name, 2)
+                    self.debugger.add_breakpoint(tempfiles[0].name, 4)
+                    self.debugger.remove_breakpoint(tempfiles[0].name, 2)
+                    self.debugger.continue_until_breakpoint()
                 elif current_program_state == 2:
-                    self.assertEqual(debugger.get_line_number(), 4)
-                    debugger.continue_until_breakpoint()
+                    self.assertEqual(self.debugger.get_line_number(), 4)
+                    self.debugger.continue_until_breakpoint()
 
-            debugger.start_debugging(machine, tempfiles[0].name,
-                                     debugger.DebugMode.StepMode)
+            self.debugger.start_debugging(machine, tempfiles[0].name,
+                                          debugger.DebugMode.StepMode)
 
     def test_conditional_breakpoint_stops_where_expected(self):
         current_program_state = 0
@@ -86,15 +86,15 @@ class DebuggerTests(unittest.TestCase):
                 nonlocal current_program_state
                 current_program_state += 1
                 if current_program_state == 1:
-                    debugger.add_breakpoint(tempfiles[0].name, 2, 'a == 1')
-                    debugger.add_breakpoint(tempfiles[0].name, 4)
-                    debugger.continue_until_breakpoint()
+                    self.debugger.add_breakpoint(tempfiles[0].name, 2, 'a == 1')
+                    self.debugger.add_breakpoint(tempfiles[0].name, 4)
+                    self.debugger.continue_until_breakpoint()
                 elif current_program_state == 2:
-                    self.assertEqual(debugger.get_line_number(), 4)
-                    debugger.continue_until_breakpoint()
+                    self.assertEqual(self.debugger.get_line_number(), 4)
+                    self.debugger.continue_until_breakpoint()
 
-            debugger.start_debugging(machine, tempfiles[0].name,
-                                     debugger.DebugMode.StepMode)
+            self.debugger.start_debugging(machine, tempfiles[0].name,
+                                          debugger.DebugMode.StepMode)
 
     def test_should_stop_on_breakpoint_returns_correct_value(self):
         current_program_state = 0
@@ -104,21 +104,24 @@ class DebuggerTests(unittest.TestCase):
                                  'c = 2',
                                  'd = 3'], tempfiles[0].name)
 
-            debugger.add_breakpoint(tempfiles[0].name, 1)
+            self.debugger.add_breakpoint(tempfiles[0].name, 1)
 
             def machine():
                 nonlocal current_program_state
                 current_program_state += 1
                 if current_program_state == 1:
-                    self.assertTrue(debugger.should_stop_on_breakpoint())
-                    debugger.add_breakpoint(tempfiles[0].name, 2)
-                    debugger.continue_until_breakpoint()
-                elif current_program_state == 2:
-                    self.assertTrue(debugger.should_stop_on_breakpoint())
-                    debugger.continue_until_breakpoint()
+                    self.debugger.continue_until_breakpoint()  # because we are
+                    # in test
+                if current_program_state == 2:
+                    self.assertTrue(self.debugger.should_stop_on_breakpoint())
+                    self.debugger.add_breakpoint(tempfiles[0].name, 2)
+                    self.debugger.continue_until_breakpoint()
+                elif current_program_state == 3:
+                    self.assertTrue(self.debugger.should_stop_on_breakpoint())
+                    self.debugger.continue_until_breakpoint()
 
-            debugger.start_debugging(machine, tempfiles[0].name,
-                                     debugger.DebugMode.StepMode)
+            self.debugger.start_debugging(machine, tempfiles[0].name,
+                                          debugger.DebugMode.StepMode)
 
     def test_get_globals_and_locals_returns_correct_dictionaries(self):
         current_program_state = 0
@@ -132,14 +135,14 @@ class DebuggerTests(unittest.TestCase):
                 nonlocal current_program_state
                 current_program_state += 1
                 if current_program_state == 1:
-                    _globals, _locals = debugger.get_globals_and_locals()
+                    _globals, _locals = self.debugger.get_globals_and_locals()
                     for i in range(4):
                         self.assertFalse(i in _globals.values())
                         self.assertFalse(i in _locals.values())
-                    debugger.add_breakpoint(tempfiles[0].name, 4)
-                    debugger.continue_until_breakpoint()
+                    self.debugger.add_breakpoint(tempfiles[0].name, 4)
+                    self.debugger.continue_until_breakpoint()
                 elif current_program_state == 2:
-                    _globals, _locals = debugger.get_globals_and_locals()
+                    _globals, _locals = self.debugger.get_globals_and_locals()
                     for i in range(3):
                         self.assertTrue(i in _globals.values())
                         self.assertTrue(i in _locals.values())
@@ -150,10 +153,10 @@ class DebuggerTests(unittest.TestCase):
                         self.assertTrue(letter in _locals.keys())
                     self.assertFalse('d' in _globals.keys())
                     self.assertFalse('d' in _locals.keys())
-                    debugger.continue_until_breakpoint()
+                    self.debugger.continue_until_breakpoint()
 
-            debugger.start_debugging(machine, tempfiles[0].name,
-                                     debugger.DebugMode.StepMode)
+            self.debugger.start_debugging(machine, tempfiles[0].name,
+                                          debugger.DebugMode.StepMode)
 
     def test_modify_var_works_correctly(self):
         current_program_state = 0
@@ -167,20 +170,21 @@ class DebuggerTests(unittest.TestCase):
                 nonlocal current_program_state
                 current_program_state += 1
                 if current_program_state == 1:
-                    debugger.add_breakpoint(tempfiles[0].name, 3)
-                    debugger.continue_until_breakpoint()
+                    self.debugger.add_breakpoint(tempfiles[0].name, 3)
+                    self.debugger.continue_until_breakpoint()
                 elif current_program_state == 2:
-                    debugger.add_breakpoint(tempfiles[0].name, 4)
-                    debugger.modify_var(1, 'b = 0.02')  # 1 - because we are
+                    self.debugger.add_breakpoint(tempfiles[0].name, 4)
+                    self.debugger.modify_var(1,
+                                             'b = 0.02')  # 1 - because we are
                     # in test
-                    debugger.continue_until_breakpoint()
+                    self.debugger.continue_until_breakpoint()
                 elif current_program_state == 3:
-                    _globals, _locals = debugger.get_globals_and_locals()
+                    _globals, _locals = self.debugger.get_globals_and_locals()
                     self.assertEqual(_locals['b'], 0.02)
-                    debugger.continue_until_breakpoint()
+                    self.debugger.continue_until_breakpoint()
 
-            debugger.start_debugging(machine, tempfiles[0].name,
-                                     debugger.DebugMode.StepMode)
+            self.debugger.start_debugging(machine, tempfiles[0].name,
+                                          debugger.DebugMode.StepMode)
 
     def test_exec_code_works_correctly(self):
         current_program_state = 0
@@ -195,15 +199,15 @@ class DebuggerTests(unittest.TestCase):
                 nonlocal current_program_state
                 current_program_state += 1
                 if current_program_state == 1:
-                    debugger.add_breakpoint(tempfiles[0].name, 4)
+                    self.debugger.add_breakpoint(tempfiles[0].name, 4)
                 elif current_program_state == 2:
-                    debugger.exec_code('test_func(5)')
-                    _globals, _locals = debugger.get_globals_and_locals()
+                    self.debugger.exec_code('test_func(5)')
+                    _globals, _locals = self.debugger.get_globals_and_locals()
                     self.assertEqual(_globals['a'], 5)
-                debugger.continue_until_breakpoint()
+                self.debugger.continue_until_breakpoint()
 
-            debugger.start_debugging(machine, tempfiles[0].name,
-                                     debugger.DebugMode.StepMode)
+            self.debugger.start_debugging(machine, tempfiles[0].name,
+                                          debugger.DebugMode.StepMode)
 
     def test_imported_code_breakpoints(self):
         current_program_state = 0
@@ -229,14 +233,16 @@ class DebuggerTests(unittest.TestCase):
                 nonlocal current_program_state, stopped
                 current_program_state += 1
                 if current_program_state == 1:
-                    debugger.add_breakpoint(imported_filename, 2)
-                    debugger.continue_until_breakpoint()
+                    self.debugger.add_breakpoint(imported_filename, 1)
+                    self.debugger.continue_until_breakpoint()
                 elif current_program_state == 2:
-                    self.assertEqual(debugger.get_filename(),
+                    self.assertEqual(self.debugger.get_filename(),
                                      imported_filename)
+                    self.assertEqual(self.debugger.get_line_number(),
+                                     1)
                     stopped = True
-                    debugger.continue_until_breakpoint()
+                    self.debugger.continue_until_breakpoint()
 
-            debugger.start_debugging(machine, test_filename,
-                                     debugger.DebugMode.StepMode)
+            self.debugger.start_debugging(machine, test_filename,
+                                          debugger.DebugMode.StepMode)
         self.assertTrue(stopped)

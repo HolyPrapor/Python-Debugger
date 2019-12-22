@@ -93,9 +93,10 @@ class Debugger:
         return False
 
     def get_code_context(self):
-        __, line_number, __, lines, __ = inspect.getframeinfo(
-            self.current_program_frame, 100000)  # I don't know how to
-        # force this func to return all lines
+        filename, line_number, __, __, __ = inspect.getframeinfo(
+            self.current_program_frame)
+        with open(filename, 'r') as f:
+            lines = f.read()
         return lines, line_number
 
     def get_globals_and_locals(self):
@@ -120,8 +121,6 @@ class Debugger:
         if line_number in self.breakpoints and\
                 filename in self.breakpoints[line_number]:
             del self.breakpoints[line_number][filename]
-        # else:
-        #    raise LookupError
 
     def get_all_breakpoints(self):
         return self.breakpoints

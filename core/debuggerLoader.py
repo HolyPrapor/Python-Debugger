@@ -5,8 +5,6 @@ import sys
 import os
 import core.debugger as debugger
 
-debug = None
-
 
 class DebugFinder(MetaPathFinder):
     def __init__(self):
@@ -20,6 +18,8 @@ class DebugFinder(MetaPathFinder):
     def find_spec(self, fullname, path, target=None):
         if path is None or path == "":
             path = [os.getcwd()]
+            for entry in sys.path:
+                path.append(entry)
         if "." in fullname:
             *parents, name = fullname.split(".")
         else:
@@ -44,6 +44,8 @@ class DebugFinder(MetaPathFinder):
 
 
 class DebugLoader(Loader):
+    debug = None
+
     def __init__(self, filename):
         self.filename = filename
 
@@ -59,13 +61,12 @@ class DebugLoader(Loader):
             compiled_code = compile(data, module.__file__, 'exec')
             modified_code = debugger.modify_code(compiled_code)
             _globals = vars(module)
-            _globals['debug'] = debug
+            _globals['debug'] = DebugLoader.debug
             exec(modified_code, _globals)
 
 
 def install_custom_loader(debug_function):
-    global debug
-    debug = debug_function
+    DebugLoader.debug = debug_function
     sys.meta_path.insert(0, DebugFinder())
 
 
