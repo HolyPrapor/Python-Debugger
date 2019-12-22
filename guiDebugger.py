@@ -13,7 +13,7 @@ import inspect
 import types
 import collections
 
-STDOUT_COLOR = QColor(255, 255, 255)
+STDOUT_COLOR = QColor(0, 0, 0)
 STDERR_COLOR = QColor(255, 0, 0)
 RUNNING_BG_COLOR = QColor(120, 115, 130)
 
@@ -148,7 +148,20 @@ class GuiDebugger(QMainWindow):
         self.tab.setCurrentWidget(self.tab.tab_container[filename])
 
     def _about(self):
-        QMessageBox.about(self, 'About Python Debugger', 'Some information')
+        QMessageBox.about(self,
+                          'About Python Debugger',
+                          'Ctrl + O : Open file\n'
+                          'F5 : Launch debugger on current opened file\n'
+                          'F7 : Step in\n'
+                          'F8 : Step over\n'
+                          'F9 : Continue\n'
+                          'F1 : Exec code\n'
+                          'F3 : Stop debugger\n'
+                          'Ctrl + Q : Exit debugger\n'
+                          'Editing stack values allowed through stack widget\n'
+                          'To place a breakpoint click near the line number\n'
+                          'To place a conditional breakpoint click while'
+                          'holding SHIFT button')
 
     def _quit(self):
         QCoreApplication.quit()
@@ -240,7 +253,8 @@ class GuiDebugger(QMainWindow):
             widget = self.tab.widget(index)
             widget.clear_highlights()
             widget.setPaper(QColor(BACKGROUND_COLOR))
-
+        if self.debugger:
+            self.debugger.stop_debug()
         self.active_debugger = False
         self.debugger = None
 

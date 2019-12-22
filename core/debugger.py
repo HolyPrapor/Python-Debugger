@@ -40,6 +40,7 @@ class Debugger:
         self.current_debug_interface = None
         self.current_program_frame = None
         self.current_stacktrace = None
+        self.after_debug_func = None
         self.step_over_marker = []
         self.start_stacktrace_len = 0
 
@@ -173,12 +174,18 @@ class Debugger:
                         stdout=sys.stdout, stderr=sys.stderr,
                         stdin=sys.stdin,
                         after_debug_func=None):
+        self.after_debug_func = after_debug_func
         self.current_debug_interface = debug_function
         self.current_debug_mode = DebugMode(mode)
         debuggerLoader.install_custom_loader(self.debug)
-        with open(file, 'r') as code:
-            compiled_code = compile(code.read(), file, 'exec')
-            modified_code = modify_code(compiled_code)
+        try:
+            with open(file, 'r') as code:
+                compiled_code = compile(code.read(), file, 'exec')
+                modified_code = modify_code(compiled_code)
+        except:
+            print(sys.exc_info(), file=stderr)
+            self.stop_debug()
+            return
         _globals = {
             'debug': self.debug,
             '__name__': '__main__',
@@ -190,8 +197,11 @@ class Debugger:
                 exec(modified_code, _globals)
             except:
                 traceback.print_exc(file=sys.stderr)
-            if after_debug_func:
-                after_debug_func()
+            self.stop_debug()
+
+    def stop_debug(self):
+        if self.after_debug_func:
+            self.after_debug_func()
         debuggerLoader.remove_custom_loader_and_invalidate_caches()
 
 
