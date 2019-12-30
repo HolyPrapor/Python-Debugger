@@ -3,9 +3,15 @@ import collections
 from bytecode import Instr, Bytecode
 from enum import Enum
 from contextlib import redirect_stdout, redirect_stderr
+from utils.redirect_stdin import redirect_stdin
+from utils.change_working_directory import change_working_directory
+from utils.change_sys_arguments import change_sys_arguments
 import core.debuggerLoader as debuggerLoader
 import sys
-import traceback
+import os
+
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                             os.path.pardir))
 
 
 class Breakpoint:
@@ -47,8 +53,9 @@ class Debugger:
     def debug(self):
         self.current_stacktrace = self.get_stacktrace()
         self.current_program_frame = inspect.currentframe().f_back
-        if self.current_debug_mode == DebugMode.StepMode or\
-                self.should_stop_on_breakpoint():
+        # print(self.get_filename(), self.get_line_number(), self.get_function_name())
+        if (self.current_debug_mode == DebugMode.StepMode or
+                self.should_stop_on_breakpoint()):
             self.current_debugger_state = DebuggerState.Stopped
         if self.current_debugger_state == DebuggerState.Stopped:
             self.current_debug_interface()
@@ -81,13 +88,14 @@ class Debugger:
         if (filename, function_name) in self.step_over_marker:
             self.step_over_marker = []
             return True
-        if line_num in self.breakpoints and\
+        if line_num in self.breakpoints and \
                 filename in self.breakpoints[line_num]:
             if self.breakpoints[line_num][filename].condition is not None:
                 try:
                     return eval(self.breakpoints[line_num][filename].condition,
                                 *self.get_globals_and_locals())
-                except:
+                except BaseException:
+                    # If condition was not correct (ie raise BaseException)
                     print("Condition was wrong. Stopping.", file=sys.stderr)
                     return True
             return True
@@ -119,7 +127,7 @@ class Debugger:
             Breakpoint(filename, line_number, condition)
 
     def remove_breakpoint(self, filename, line_number):
-        if line_number in self.breakpoints and\
+        if line_number in self.breakpoints and \
                 filename in self.breakpoints[line_number]:
             del self.breakpoints[line_number][filename]
 
@@ -148,7 +156,7 @@ class Debugger:
         compiled_code = compile(code, "Debug Code", 'exec')
         try:
             exec(compiled_code, *dicts)
-        except:
+        except BaseException:
             print("Exception caught", file=sys.stderr)
             print(sys.exc_info(), file=sys.stderr)
 
@@ -173,7 +181,9 @@ class Debugger:
     def start_debugging(self, debug_function, file, mode=DebugMode.StepMode,
                         stdout=sys.stdout, stderr=sys.stderr,
                         stdin=sys.stdin,
-                        after_debug_func=None):
+                        after_debug_func=None,
+                        new_wd=os.getcwd(),
+                        arguments=None):
         self.after_debug_func = after_debug_func
         self.current_debug_interface = debug_function
         self.current_debug_mode = DebugMode(mode)
@@ -182,7 +192,7 @@ class Debugger:
             with open(file, 'r') as code:
                 compiled_code = compile(code.read(), file, 'exec')
                 modified_code = modify_code(compiled_code)
-        except:
+        except BaseException:
             print(sys.exc_info(), file=stderr)
             self.stop_debug()
             return
@@ -191,13 +201,12 @@ class Debugger:
             '__name__': '__main__',
         }
         self.start_stacktrace_len = self.get_start_stacktrace_len()
-        with redirect_stdout(stdout), redirect_stderr(stderr):
-            sys.stdin = stdin
+        with redirect_stdout(stdout), redirect_stderr(stderr), \
+             redirect_stdin(stdin), change_working_directory(new_wd), \
+             change_sys_arguments(arguments):
             try:
                 exec(modified_code, _globals)
-            except:
-                # print(traceback.format_exc(), file=sys.stderr) fails on
-                # windows for no reason????
+            except BaseException:
                 print(sys.exc_info())
             self.stop_debug()
 
@@ -224,9 +233,9 @@ def modify_code(file_code):
                 modified_bytecode.append(
                     Instr('POP_TOP',
                           lineno=instruction.lineno))
-            if instruction.name == "LOAD_CONST" \
-                    and type(instruction.arg) == type(file_code) \
-                    and is_source_available(instruction.arg):
+            if (instruction.name == "LOAD_CONST"
+                    and type(instruction.arg) is type(file_code)
+                    and is_source_available(instruction.arg)):
                 modified_bytecode.append(
                     Instr('LOAD_CONST',
                           modify_code(instruction.arg),
@@ -250,7 +259,7 @@ def is_source_available(function):
 
 
 def remove_last_n_from(stack, n):
-    for i in range(n):
+    for _ in range(n):
         stack.pop()
 
 

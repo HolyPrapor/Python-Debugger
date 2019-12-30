@@ -2,7 +2,8 @@ from PyQt5.QtGui import QIcon, QStandardItem, QStandardItemModel, QTextCursor, \
     QColor
 from PyQt5.QtWidgets import QMainWindow, QAction, QTabWidget, \
     QApplication, QFileDialog, QMessageBox, QWidget, \
-    QVBoxLayout, QTreeView, QTextEdit, QHBoxLayout, QInputDialog
+    QVBoxLayout, QTreeView, QTextEdit, QHBoxLayout, QInputDialog, QLineEdit,\
+    QDialog, QDialogButtonBox, QFormLayout
 from core.editor import Editor, BACKGROUND_COLOR
 import core.debugger as debugger
 from PyQt5.QtCore import QCoreApplication, pyqtSignal
@@ -13,7 +14,10 @@ import inspect
 import types
 import collections
 
-STDOUT_COLOR = QColor(0, 0, 0)
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                             os.path.pardir))
+
+STDOUT_COLOR = QColor(255, 255, 255)
 STDERR_COLOR = QColor(255, 0, 0)
 RUNNING_BG_COLOR = QColor(120, 115, 130)
 
@@ -98,7 +102,7 @@ class GuiDebugger(QMainWindow):
                                        'Step over', self, shortcut='F8',
                                        triggered=self.step_over))
         self.toolbar.addAction(QAction(QIcon('icons/exec-code-icon.svg'),
-                                       'Exec code', self, shortcut='F1',
+                                       'Exec code', self, shortcut='F6',
                                        triggered=self.exec_code))
         self.toolbar.addAction(QAction(QIcon('icons/stop-debug-icon.svg'),
                                        'Stop debug', self, shortcut='F3',
@@ -127,7 +131,7 @@ class GuiDebugger(QMainWindow):
         # HELP MENU
         help_menu = menu.addMenu('&Help')
         help_menu.addAction(
-            QAction(QIcon('icons/info.svg'), '&Info', self, shortcut='Ctrl+I',
+            QAction(QIcon('icons/info.svg'), '&Info', self, shortcut='F1',
                     triggered=self._about))
 
     def _open_file(self):
@@ -155,7 +159,7 @@ class GuiDebugger(QMainWindow):
                           'F7 : Step in\n'
                           'F8 : Step over\n'
                           'F9 : Continue\n'
-                          'F1 : Exec code\n'
+                          'F6 : Exec code\n'
                           'F3 : Stop debugger\n'
                           'Ctrl + Q : Exit debugger\n'
                           'Editing stack values allowed through stack widget\n'
@@ -260,21 +264,26 @@ class GuiDebugger(QMainWindow):
         self.debugger = None
 
     def start_debugging(self):
-        if len(self.tab.tab_container) > 0 and not self.active_debugger:
-            self.input = collections.deque()
-            self.providing_input = False
-            self.active_debugger = True
-            self.debugger = debugger.Debugger()
-            self.set_breakpoints_from_tabs()
-            t = Thread(target=self.debugger.start_debugging,
-                       args=(debug_function,
-                             self.get_current_tab_filename()),
-                       kwargs={'stdout': self.stdout,
-                               'stderr': self.stderr,
-                               'stdin': InputProvider(),
-                               'after_debug_func': self.after_debug_func})
-            t.daemon = True
-            t.start()
+        if not self.active_debugger:
+            (program_to_debug,
+             working_directory, arguments) = StartProgramDialog().get_inputs()
+            if program_to_debug:
+                self.input = collections.deque()
+                self.providing_input = False
+                self.active_debugger = True
+                self.debugger = debugger.Debugger()
+                self.set_breakpoints_from_tabs()
+                t = Thread(target=self.debugger.start_debugging,
+                           args=(debug_function,
+                                 program_to_debug),
+                           kwargs={'stdout': self.stdout,
+                                   'stderr': self.stderr,
+                                   'stdin': InputProvider(),
+                                   'after_debug_func': self.after_debug_func,
+                                   'new_wd': working_directory,
+                                   'arguments': arguments})
+                t.daemon = True
+                t.start()
 
     def get_current_tab_filename(self):
         current_widget = self.tab.currentWidget()
@@ -359,8 +368,8 @@ class StacktraceWidget(QWidget):
                 keyWidget = QStandardItem(str(key))
                 keyWidget.setEditable(False)
                 try:
-                    value_as_str = str(value)
-                except:
+                    value_as_str = repr(value)
+                except BaseException:
                     value_as_str = "Can't see"
                 valueWidget = ValueWidget(self.parent,
                                           value_as_str, str(key), str(index))
@@ -408,6 +417,33 @@ class QBigInputDialog():
             return str(text)
         else:
             return ''
+
+
+class StartProgramDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        self.path_to_program = QLineEdit(self)
+        self.working_directory = QLineEdit(self)
+        self.arguments = QLineEdit(self)
+        buttonBox = QDialogButtonBox(QDialogButtonBox.Ok
+                                     | QDialogButtonBox.Cancel, self)
+
+        layout = QFormLayout(self)
+        layout.addRow("Path to program", self.path_to_program)
+        layout.addRow("Working directory", self.working_directory)
+        layout.addRow("Arguments", self.arguments)
+        layout.addWidget(buttonBox)
+
+        buttonBox.accepted.connect(self.accept)
+        buttonBox.rejected.connect(self.reject)
+
+    def get_inputs(self):
+        result = self.exec()
+        if result:
+            return self.path_to_program.text(),\
+                   self.working_directory.text(), self.arguments.text()
+        return None, None, None
 
 
 def main():

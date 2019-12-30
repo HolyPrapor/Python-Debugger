@@ -1,4 +1,4 @@
-from PyQt5.Qsci import *
+from PyQt5 import Qsci
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont, QFontMetrics, QColor
 from PyQt5.QtWidgets import QInputDialog
@@ -19,7 +19,7 @@ MARKER_BACKGROUND = "#2b2b2b"  # "#313335"
 MARKER_FOREGROUND = "#676a6d"
 
 
-class Editor(QsciScintilla):
+class Editor(Qsci.QsciScintilla):
     BACKGROUND_MARKER_NUM = 10
     BACKGROUND_BREAKPOINT_MARKER_NUM = 9
     BREAKPOINT_MARKER_NUM = 8
@@ -94,13 +94,13 @@ class Editor(QsciScintilla):
         self.setIndentationGuidesForegroundColor(QColor(IND_FOREGROUND))
 
         # FOLDING MARGIN
-        self.setFolding(QsciScintilla.PlainFoldStyle)
+        self.setFolding(Qsci.QsciScintilla.PlainFoldStyle)
         self.setMarginWidth(2, 20)  # (2,14)
         # FOLDING MARKERS
-        self.markerDefine("V", QsciScintilla.SC_MARKNUM_FOLDEROPEN)
-        self.markerDefine(">", QsciScintilla.SC_MARKNUM_FOLDER)
-        self.markerDefine("V", QsciScintilla.SC_MARKNUM_FOLDEROPENMID)
-        self.markerDefine(">", QsciScintilla.SC_MARKNUM_FOLDEREND)
+        self.markerDefine("V", Qsci.QsciScintilla.SC_MARKNUM_FOLDEROPEN)
+        self.markerDefine(">", Qsci.QsciScintilla.SC_MARKNUM_FOLDER)
+        self.markerDefine("V", Qsci.QsciScintilla.SC_MARKNUM_FOLDEROPENMID)
+        self.markerDefine(">", Qsci.QsciScintilla.SC_MARKNUM_FOLDEREND)
         # FOLDING MARKERS BACKGROUND AND FOREGROUND
         self.setMarkerBackgroundColor(QColor(MARKER_BACKGROUND))
         self.setMarkerForegroundColor(QColor(MARGIN_FOREGROUND))
@@ -109,28 +109,28 @@ class Editor(QsciScintilla):
 
         self.setMarginSensitivity(1, True)
         self.marginClicked.connect(self.on_margin_clicked)
-        self.markerDefine(QsciScintilla.SC_MARK_CIRCLE,
+        self.markerDefine(Qsci.QsciScintilla.SC_MARK_CIRCLE,
                           self.BREAKPOINT_MARKER_NUM)
         self.setMarkerBackgroundColor(QColor("#ee1111"),
                                       self.BREAKPOINT_MARKER_NUM)
-        self.markerDefine(QsciScintilla.SC_MARK_BACKGROUND,
+        self.markerDefine(Qsci.QsciScintilla.SC_MARK_BACKGROUND,
                           self.BACKGROUND_BREAKPOINT_MARKER_NUM)
         self.setMarkerBackgroundColor(QColor("#ec6861"),
                                       self.BACKGROUND_BREAKPOINT_MARKER_NUM)
-        self.markerDefine(QsciScintilla.SC_MARK_BACKGROUND,
+        self.markerDefine(Qsci.QsciScintilla.SC_MARK_BACKGROUND,
                           self.BACKGROUND_MARKER_NUM)
         self.setMarkerBackgroundColor(QColor("#acec61"),
                                       self.BACKGROUND_MARKER_NUM)
 
         # FOLDING LINE DISABLE
-        self.SendScintilla(QsciScintilla.SCI_SETFOLDFLAGS, 0)
+        self.SendScintilla(Qsci.QsciScintilla.SCI_SETFOLDFLAGS, 0)
 
         # AUTO COMPLETION
-        self.setAutoCompletionSource(QsciScintilla.AcsDocument)
+        self.setAutoCompletionSource(Qsci.QsciScintilla.AcsDocument)
         self.setAutoCompletionThreshold(2)
 
         # DISABLE HORIZONTAL SCROLLBAR
-        self.SendScintilla(QsciScintilla.SCI_SETHSCROLLBAR, 0)
+        self.SendScintilla(Qsci.QsciScintilla.SCI_SETHSCROLLBAR, 0)
 
         self.setStyleSheet("""
         QsciScintilla
@@ -154,13 +154,15 @@ class Editor(QsciScintilla):
             self.bp_remove(self.filename, nline + 1)
         else:
             condition = None
+            ok = True
             if modifiers & Qt.ShiftModifier:
-                condition = QConditionInputDialog(self).readline()
-            self.markerAdd(nline, self.BACKGROUND_BREAKPOINT_MARKER_NUM)
-            self.markerAdd(nline, self.BREAKPOINT_MARKER_NUM)
-            bp = Breakpoint(self.filename, nline + 1, condition)
-            self.breakpoints.add(bp)
-            self.bp_add(self.filename, nline + 1, condition)
+                (ok, condition) = QConditionInputDialog(self).readline()
+            if ok:
+                self.markerAdd(nline, self.BACKGROUND_BREAKPOINT_MARKER_NUM)
+                self.markerAdd(nline, self.BREAKPOINT_MARKER_NUM)
+                bp = Breakpoint(self.filename, nline + 1, condition)
+                self.breakpoints.add(bp)
+                self.bp_add(self.filename, nline + 1, condition)
 
     def set_line_highlight(self, line_num):
         if line_num not in self.highlighted_lines:
@@ -183,7 +185,9 @@ class QConditionInputDialog:
     def readline(self):
         text, ok = QInputDialog.getText(self.parentWidget, 'Set condition',
                                         'Condition:')
+        if not len(text):
+            text = None
         if ok:
-            return str(text)
+            return True, text
         else:
-            return None
+            return False, None

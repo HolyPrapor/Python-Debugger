@@ -5,6 +5,9 @@ import sys
 import os
 import core.debugger as debugger
 
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                             os.path.pardir))
+
 
 class DebugFinder(MetaPathFinder):
     def __init__(self):
@@ -64,7 +67,7 @@ class DebugLoader(Loader):
             _globals['debug'] = DebugLoader.debug
             try:
                 exec(modified_code, _globals)
-            except:
+            except BaseException:
                 print(sys.exc_info(), file=sys.stderr)
 
 
