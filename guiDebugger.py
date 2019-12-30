@@ -17,7 +17,7 @@ import collections
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)),
                              os.path.pardir))
 
-STDOUT_COLOR = QColor(255, 255, 255)
+STDOUT_COLOR = QColor(0, 0, 0)
 STDERR_COLOR = QColor(255, 0, 0)
 RUNNING_BG_COLOR = QColor(120, 115, 130)
 
@@ -271,7 +271,8 @@ class MainWindow(QMainWindow):
         if not self.active_debugger:
             (program_to_debug,
              working_directory, arguments) = StartProgramDialog().get_inputs()
-            if program_to_debug and os.path.isdir(working_directory):
+            if (os.path.isfile(program_to_debug) 
+				and os.path.isdir(working_directory)):
                 self.try_add_tab(program_to_debug)
                 self.input = collections.deque()
                 self.providing_input = False
