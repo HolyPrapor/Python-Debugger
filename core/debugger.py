@@ -182,8 +182,12 @@ class Debugger:
                         stdout=sys.stdout, stderr=sys.stderr,
                         stdin=sys.stdin,
                         after_debug_func=None,
-                        new_wd=os.getcwd(),
+                        new_wd=None,
                         arguments=None):
+        if not new_wd:
+            new_wd = os.getcwd()
+        if not arguments:
+            arguments = ''
         self.after_debug_func = after_debug_func
         self.current_debug_interface = debug_function
         self.current_debug_mode = DebugMode(mode)

@@ -267,7 +267,8 @@ class GuiDebugger(QMainWindow):
         if not self.active_debugger:
             (program_to_debug,
              working_directory, arguments) = StartProgramDialog().get_inputs()
-            if program_to_debug:
+            if program_to_debug and os.path.isdir(working_directory):
+                self.try_add_tab(program_to_debug)
                 self.input = collections.deque()
                 self.providing_input = False
                 self.active_debugger = True
@@ -281,9 +282,12 @@ class GuiDebugger(QMainWindow):
                                    'stdin': InputProvider(),
                                    'after_debug_func': self.after_debug_func,
                                    'new_wd': working_directory,
-                                   'arguments': arguments})
+                                   'arguments': arguments.split()})
                 t.daemon = True
                 t.start()
+            else:
+                self.write_to_stdout("Path to file or WD was incorrect\n",
+                                     STDERR_COLOR)
 
     def get_current_tab_filename(self):
         current_widget = self.tab.currentWidget()

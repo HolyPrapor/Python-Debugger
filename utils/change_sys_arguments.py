@@ -11,9 +11,6 @@ class change_sys_arguments(AbstractContextManager):
     def __enter__(self):
         self.previous_arguments = sys.argv
         new_arguments = [os.getcwd(), *self.new_arguments]
-        print(new_arguments)
-        for i in new_arguments:
-            print(i)
         sys.argv = new_arguments
         return self
 
