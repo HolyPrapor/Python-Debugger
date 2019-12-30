@@ -23,10 +23,11 @@ RUNNING_BG_COLOR = QColor(120, 115, 130)
 
 
 class GuiDebugger(QMainWindow):
-    input_request_handler = pyqtSignal(bool)
+    input_request_handler = pyqtSignal()
     debug_function_handler = pyqtSignal(str, int)
     output_request_handler = pyqtSignal(str, QColor)
     error_request_handler = pyqtSignal(str, QColor)
+    after_debug_function_handler = pyqtSignal()
 
     def __init__(self, parent=None):
         super(GuiDebugger, self).__init__(parent)
@@ -37,6 +38,7 @@ class GuiDebugger(QMainWindow):
         self.stacktrace_widget = StacktraceWidget(self)
         self.output_widget = QDbgConsole()
         self.sub_layout = QHBoxLayout()
+        self.stdin = InputProvider()
         self.stdout = OutputProvider(STDOUT_COLOR)
         self.stderr = OutputProvider(STDERR_COLOR)
         self.setup_tab_widget()
@@ -60,6 +62,7 @@ class GuiDebugger(QMainWindow):
         self.input_request_handler.connect(self.get_input)
         self.output_request_handler.connect(self.write_to_stdout)
         self.error_request_handler.connect(self.write_to_stdout)
+        self.after_debug_function_handler.connect(self.stop_debug)
 
     def setup_tab_widget(self):
         self.tab.setStyleSheet("""
@@ -247,7 +250,7 @@ class GuiDebugger(QMainWindow):
     def after_debug_func(self):
         if self.active_debugger:
             print("Program finished.")
-            self.stop_debug()
+            self.after_debug_function_handler.emit()
 
     def clear_tabs(self):
         for i in range(len(self.tab.tab_container)):
@@ -279,7 +282,7 @@ class GuiDebugger(QMainWindow):
                                  program_to_debug),
                            kwargs={'stdout': self.stdout,
                                    'stderr': self.stderr,
-                                   'stdin': InputProvider(),
+                                   'stdin': self.stdin,
                                    'after_debug_func': self.after_debug_func,
                                    'new_wd': working_directory,
                                    'arguments': arguments.split()})
@@ -309,7 +312,7 @@ def debug_function():
 class InputProvider:
     def readline(self):
         if len(gui_interface.input) == 0 and not gui_interface.providing_input:
-            gui_interface.input_request_handler.emit(True)
+            gui_interface.input_request_handler.emit()
         while len(gui_interface.input) == 0:
             pass
         received_input = gui_interface.input.popleft()
