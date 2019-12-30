@@ -22,15 +22,16 @@ STDERR_COLOR = QColor(255, 0, 0)
 RUNNING_BG_COLOR = QColor(120, 115, 130)
 
 
-class GuiDebugger(QMainWindow):
+class MainWindow(QMainWindow):
     input_request_handler = pyqtSignal()
     debug_function_handler = pyqtSignal(str, int)
     output_request_handler = pyqtSignal(str, QColor)
     error_request_handler = pyqtSignal(str, QColor)
     after_debug_function_handler = pyqtSignal()
 
-    def __init__(self, parent=None):
-        super(GuiDebugger, self).__init__(parent)
+    def __init__(self, debug_function, parent=None):
+        super().__init__(parent)
+        self.debug_function = debug_function
         self.debugger = debugger.Debugger()
         self.main_widget = QWidget(self)
         self.layout = QVBoxLayout(self.main_widget)
@@ -38,9 +39,9 @@ class GuiDebugger(QMainWindow):
         self.stacktrace_widget = StacktraceWidget(self)
         self.output_widget = QDbgConsole()
         self.sub_layout = QHBoxLayout()
-        self.stdin = InputProvider()
-        self.stdout = OutputProvider(STDOUT_COLOR)
-        self.stderr = OutputProvider(STDERR_COLOR)
+        self.stdin = InputProvider(self)
+        self.stdout = OutputProvider(self, STDOUT_COLOR)
+        self.stderr = OutputProvider(self, STDERR_COLOR)
         self.setup_tab_widget()
         self.set_window_ui()
         self.set_menu()
@@ -278,7 +279,7 @@ class GuiDebugger(QMainWindow):
                 self.debugger = debugger.Debugger()
                 self.set_breakpoints_from_tabs()
                 t = Thread(target=self.debugger.start_debugging,
-                           args=(debug_function,
+                           args=(self.debug_function,
                                  program_to_debug),
                            kwargs={'stdout': self.stdout,
                                    'stderr': self.stderr,
@@ -303,35 +304,31 @@ class GuiDebugger(QMainWindow):
         self.output_widget.write_with_color(message, color)
 
 
-def debug_function():
-    gui_interface.debug_function_handler.emit(
-        gui_interface.debugger.get_filename(),
-        gui_interface.debugger.get_line_number())
-
-
 class InputProvider:
+    def __init__(self, parent):
+        self.parent = parent
+
     def readline(self):
-        if len(gui_interface.input) == 0 and not gui_interface.providing_input:
-            gui_interface.input_request_handler.emit()
-        while len(gui_interface.input) == 0:
+        if len(self.parent.input) == 0 and not self.parent.providing_input:
+            self.parent.input_request_handler.emit()
+        while len(self.parent.input) == 0:
             pass
-        received_input = gui_interface.input.popleft()
+        received_input = self.parent.input.popleft()
         return received_input
 
 
 class OutputProvider:
-    def __init__(self, color: QColor):
+    def __init__(self, parent, color: QColor):
+        self.parent = parent
         self.color = color
 
     def write(self, msg):
-        gui_interface.output_request_handler.emit(msg, self.color)
+        self.parent.output_request_handler.emit(msg, self.color)
 
 
 class TabWidget(QTabWidget):
-    count = 0
-
     def __init__(self):
-        super(TabWidget, self).__init__()
+        super().__init__()
         self.setTabsClosable(True)
         self.setMovable(True)
         self.tabCloseRequested.connect(self.removeTab)
@@ -340,19 +337,19 @@ class TabWidget(QTabWidget):
         self.tab_container = dict()
 
     def addTab(self, widget, filename):
-        super(TabWidget, self).addTab(widget, filename)
+        super().addTab(widget, filename)
 
     def removeTab(self, index):
-        tab_to_remove = super(TabWidget, self).widget(index)
+        tab_to_remove = super().widget(index)
         self.tab_container = {filename: tab for filename, tab
                               in self.tab_container.items()
                               if tab != tab_to_remove}
-        super(TabWidget, self).removeTab(index)
+        super().removeTab(index)
 
 
 class StacktraceWidget(QWidget):
     def __init__(self, parent):
-        super(QWidget, self).__init__()
+        super().__init__()
         self.parent = parent
         self.tree = QTreeView(self)
         layout = QVBoxLayout(self)
@@ -387,7 +384,7 @@ class StacktraceWidget(QWidget):
 
 class ValueWidget(QStandardItem):
     def __init__(self, global_parent, value, key, depth):
-        super(QStandardItem, self).__init__(value)
+        super().__init__(value)
         self.global_parent = global_parent
         self.key = key
         self.depth = depth
@@ -399,7 +396,7 @@ class ValueWidget(QStandardItem):
 
 class QDbgConsole(QTextEdit):
     def __init__(self, parent=None):
-        super(QDbgConsole, self).__init__(parent)
+        super().__init__(parent)
         self.setReadOnly(True)
 
     def write_with_color(self, msg, color):
@@ -453,14 +450,21 @@ class StartProgramDialog(QDialog):
         return None, None, None
 
 
-def main():
-    global gui_interface
-    app = QApplication(sys.argv)
-    window = GuiDebugger()
+class GuiDebugger:
+    def __init__(self):
+        self.app = QApplication(sys.argv)
+        self.window = MainWindow(self.debug_function)
 
-    gui_interface = window
-    window.show()
-    sys.exit(app.exec_())
+    def debug_function(self):
+        self.window.debug_function_handler.emit(
+            self.window.debugger.get_filename(),
+            self.window.debugger.get_line_number())
+
+
+def main():
+    gui_debugger = GuiDebugger()
+    gui_debugger.window.show()
+    sys.exit(gui_debugger.app.exec_())
 
 
 if __name__ == '__main__':
