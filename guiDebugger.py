@@ -167,7 +167,7 @@ class GuiDebugger(QMainWindow):
                           'Ctrl + Q : Exit debugger\n'
                           'Editing stack values allowed through stack widget\n'
                           'To place a breakpoint click near the line number\n'
-                          'To place a conditional breakpoint click while'
+                          'To place a conditional breakpoint click while '
                           'holding SHIFT button')
 
     def _quit(self):
