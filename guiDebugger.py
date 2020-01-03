@@ -66,6 +66,9 @@ class MainWindow(QMainWindow):
         self.after_debug_function_handler.connect(self.stop_debug)
 
     def setup_tab_widget(self):
+        path = os.path.dirname(os.path.abspath(__file__))
+        close_button_hover_image = os.path.join(path, 'icons/close_hover.svg')
+        close_button_image = os.path.join(path, 'icons/close.svg')
         self.tab.setStyleSheet("""
         QTabWidget::pane {background: #272727;}
         QTabWidget::tab-bar:top {top: 1px;}
@@ -83,59 +86,72 @@ class MainWindow(QMainWindow):
             margin-right: -1px;
             padding: 5px 10px 5px 10px;}
         QTabBar::close-button {
-            image: url(icons/close_hover.svg)
+            image: url(%s)
         }
         QTabBar::close-button:hover {
-            image: url(icons/close.svg)
+            image: url(%s)
         }
-        """)
+        """ % (close_button_hover_image, close_button_image))
 
     def setup_toolbar(self):
+        path = os.path.dirname(os.path.abspath(__file__))
         self.toolbar = self.addToolBar('Debug actions')
-        self.toolbar.addAction(QAction(QIcon('icons/start-debug-icon.svg'),
+        self.toolbar.addAction(QAction(QIcon(
+            os.path.join(path, 'icons/start-debug-icon.svg')),
                                        'Start debugging', self, shortcut='F5',
                                        triggered=self.start_debugging))
-        self.toolbar.addAction(QAction(QIcon('icons/continue-icon.svg'),
+        self.toolbar.addAction(QAction(QIcon(
+            os.path.join(path, 'icons/continue-icon.svg')),
                                        'Continue', self, shortcut='F9',
                                        triggered=self.continue_until_breakpoint)
                                )
-        self.toolbar.addAction(QAction(QIcon('icons/step-in-icon.svg'),
+        self.toolbar.addAction(QAction(QIcon(
+            os.path.join(path, 'icons/step-in-icon.svg')),
                                        'Step in', self, shortcut='F7',
                                        triggered=self.make_step))
-        self.toolbar.addAction(QAction(QIcon('icons/step-over-icon.svg'),
+        self.toolbar.addAction(QAction(QIcon(
+            os.path.join(path, 'icons/step-over-icon.svg')),
                                        'Step over', self, shortcut='F8',
                                        triggered=self.step_over))
-        self.toolbar.addAction(QAction(QIcon('icons/exec-code-icon.svg'),
+        self.toolbar.addAction(QAction(QIcon(
+            os.path.join(path, 'icons/exec-code-icon.svg')),
                                        'Exec code', self, shortcut='F6',
                                        triggered=self.exec_code))
-        self.toolbar.addAction(QAction(QIcon('icons/stop-debug-icon.svg'),
+        self.toolbar.addAction(QAction(QIcon(
+            os.path.join(path, 'icons/stop-debug-icon.svg')),
                                        'Stop debug', self, shortcut='F3',
                                        triggered=self.stop_debug))
 
     def set_window_ui(self):
         """UI Initialization"""
+        path = os.path.dirname(os.path.abspath(__file__))
         self.setWindowTitle("Python debugger")
         self.resize(1000, 500)
-        self.setWindowIcon(QIcon('icons/veredit.ico'))
+        self.setWindowIcon(QIcon(os.path.join(path, 'icons/veredit.ico')))
         self.showMaximized()
 
     def set_menu(self):
         """Menu Initialization"""
+        path = os.path.dirname(os.path.abspath(__file__))
         menu = self.menuBar()
-
         # FILE MENU
         file_menu = menu.addMenu('File')
-        file_menu.addAction(QAction(QIcon('icons/open.svg'),
+        file_menu.addAction(QAction(QIcon(os.path.join(path,
+                                                       'icons/open.svg')),
                                     '&Open', self, shortcut='Ctrl+O',
                                     triggered=self._open_file))
         file_menu.addAction(
-            QAction(QIcon('icons/power.svg'), '&Quit', self, shortcut='Ctrl+Q',
+            QAction(QIcon(os.path.join(path,
+                                       'icons/power.svg')),
+                    '&Quit', self, shortcut='Ctrl+Q',
                     triggered=self._quit))
 
         # HELP MENU
         help_menu = menu.addMenu('&Help')
         help_menu.addAction(
-            QAction(QIcon('icons/info.svg'), '&Info', self, shortcut='F1',
+            QAction(QIcon(os.path.join(path,
+                                       'icons/info.svg')),
+                    '&Info', self, shortcut='F1',
                     triggered=self._about))
 
     def _open_file(self):
