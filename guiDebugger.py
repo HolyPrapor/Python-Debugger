@@ -1,9 +1,11 @@
-from PyQt5.QtGui import QIcon, QStandardItem, QStandardItemModel, QTextCursor, \
-    QColor
-from PyQt5.QtWidgets import QMainWindow, QAction, QTabWidget, \
-    QApplication, QFileDialog, QMessageBox, QWidget, \
-    QVBoxLayout, QTreeView, QTextEdit, QHBoxLayout, QInputDialog, QLineEdit,\
-    QDialog, QDialogButtonBox, QFormLayout, QPushButton
+from PyQt5.QtGui import (QIcon, QStandardItem, QStandardItemModel, QTextCursor,
+                         QColor)
+from PyQt5.QtWidgets import (QMainWindow, QAction, QTabWidget,
+                             QApplication, QFileDialog, QMessageBox, QWidget,
+                             QVBoxLayout, QTreeView, QTextEdit, QHBoxLayout,
+                             QInputDialog, QLineEdit,
+                             QDialog, QDialogButtonBox, QFormLayout,
+                             QPushButton)
 from core.editor import Editor, BACKGROUND_COLOR
 import core.debugger as debugger
 from PyQt5.QtCore import QCoreApplication, pyqtSignal
@@ -98,29 +100,27 @@ class MainWindow(QMainWindow):
         self.toolbar = self.addToolBar('Debug actions')
         self.toolbar.addAction(QAction(QIcon(
             os.path.join(path, 'icons/start-debug-icon.svg')),
-                                       'Start debugging', self, shortcut='F5',
-                                       triggered=self.start_debugging))
+            'Start debugging', self, shortcut='F5',
+            triggered=self.start_debugging))
         self.toolbar.addAction(QAction(QIcon(
-            os.path.join(path, 'icons/continue-icon.svg')),
-                                       'Continue', self, shortcut='F9',
-                                       triggered=self.continue_until_breakpoint)
-                               )
+            os.path.join(path, 'icons/continue-icon.svg')), 'Continue',
+            self, shortcut='F9', triggered=self.continue_until_breakpoint))
         self.toolbar.addAction(QAction(QIcon(
             os.path.join(path, 'icons/step-in-icon.svg')),
-                                       'Step in', self, shortcut='F7',
-                                       triggered=self.make_step))
+            'Step in', self, shortcut='F7',
+            triggered=self.make_step))
         self.toolbar.addAction(QAction(QIcon(
             os.path.join(path, 'icons/step-over-icon.svg')),
-                                       'Step over', self, shortcut='F8',
-                                       triggered=self.step_over))
+            'Step over', self, shortcut='F8',
+            triggered=self.step_over))
         self.toolbar.addAction(QAction(QIcon(
             os.path.join(path, 'icons/exec-code-icon.svg')),
-                                       'Exec code', self, shortcut='F6',
-                                       triggered=self.exec_code))
+            'Exec code', self, shortcut='F6',
+            triggered=self.exec_code))
         self.toolbar.addAction(QAction(QIcon(
             os.path.join(path, 'icons/stop-debug-icon.svg')),
-                                       'Stop debug', self, shortcut='F3',
-                                       triggered=self.stop_debug))
+            'Stop debug', self, shortcut='F3',
+            triggered=self.stop_debug))
 
     def set_window_ui(self):
         """UI Initialization"""
@@ -475,8 +475,8 @@ class StartProgramDialog(QDialog):
     def get_inputs(self):
         result = self.exec()
         if result:
-            return self.path_to_program.text(),\
-                   self.working_directory.text(), self.arguments.text()
+            return (self.path_to_program.text(),
+                    self.working_directory.text(), self.arguments.text())
         return None, None, None
 
     def get_filename(self):

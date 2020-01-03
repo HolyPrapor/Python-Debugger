@@ -86,7 +86,8 @@ class DebuggerTests(unittest.TestCase):
                 nonlocal current_program_state
                 current_program_state += 1
                 if current_program_state == 1:
-                    self.debugger.add_breakpoint(tempfiles[0].name, 2, 'a == 1')
+                    self.debugger.add_breakpoint(tempfiles[0].name,
+                                                 2, 'a == 1')
                     self.debugger.add_breakpoint(tempfiles[0].name, 4)
                     self.debugger.continue_until_breakpoint()
                 elif current_program_state == 2:

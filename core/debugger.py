@@ -21,8 +21,8 @@ class Breakpoint:
         self.condition = condition
 
     def __eq__(self, other):
-        return (self.filename, self.line_number, self.condition) == \
-               (other.filename, other.line_number, other.condition)
+        return ((self.filename, self.line_number, self.condition) ==
+                (other.filename, other.line_number, other.condition))
 
     def __hash__(self):
         return hash((self.filename, self.line_number, self.condition))
@@ -53,7 +53,6 @@ class Debugger:
     def debug(self):
         self.current_stacktrace = self.get_stacktrace()
         self.current_program_frame = inspect.currentframe().f_back
-        # print(self.get_filename(), self.get_line_number(), self.get_function_name())
         if (self.current_debug_mode == DebugMode.StepMode or
                 self.should_stop_on_breakpoint()):
             self.current_debugger_state = DebuggerState.Stopped
@@ -88,8 +87,8 @@ class Debugger:
         if (filename, function_name) in self.step_over_marker:
             self.step_over_marker = []
             return True
-        if line_num in self.breakpoints and \
-                filename in self.breakpoints[line_num]:
+        if (line_num in self.breakpoints and
+                filename in self.breakpoints[line_num]):
             if self.breakpoints[line_num][filename].condition is not None:
                 try:
                     return eval(self.breakpoints[line_num][filename].condition,
@@ -123,12 +122,12 @@ class Debugger:
             self.breakpoints[line_number] = dict()
         if filename in self.breakpoints[line_number]:
             raise LookupError
-        self.breakpoints[line_number][filename] = \
-            Breakpoint(filename, line_number, condition)
+        self.breakpoints[line_number][filename] = Breakpoint(
+            filename, line_number, condition)
 
     def remove_breakpoint(self, filename, line_number):
-        if line_number in self.breakpoints and \
-                filename in self.breakpoints[line_number]:
+        if (line_number in self.breakpoints and
+                filename in self.breakpoints[line_number]):
             del self.breakpoints[line_number][filename]
 
     def get_all_breakpoints(self):
@@ -141,8 +140,8 @@ class Debugger:
         return get_function_name_from_frame(self.current_program_frame)
 
     def get_filename(self):
-        (filename, _, _, _, _) = \
-            inspect.getframeinfo(self.current_program_frame)
+        (filename, _, _, _, _) = inspect.getframeinfo(
+            self.current_program_frame)
         return filename
 
     def modify_var(self, out_depth, modify_expression):
@@ -205,9 +204,9 @@ class Debugger:
             '__name__': '__main__',
         }
         self.start_stacktrace_len = self.get_start_stacktrace_len()
-        with redirect_stdout(stdout), redirect_stderr(stderr), \
-             redirect_stdin(stdin), change_working_directory(new_wd), \
-             change_sys_arguments(arguments):
+        with (redirect_stdout(stdout), redirect_stderr(stderr),
+              redirect_stdin(stdin), change_working_directory(new_wd),
+              change_sys_arguments(arguments)):
             try:
                 exec(modified_code, _globals)
             except BaseException:
