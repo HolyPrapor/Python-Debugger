@@ -17,7 +17,7 @@ import collections
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)),
                              os.path.pardir))
 
-STDOUT_COLOR = QColor(255, 255, 255)
+STDOUT_COLOR = QColor(0, 0, 0)
 STDERR_COLOR = QColor(255, 0, 0)
 RUNNING_BG_COLOR = QColor(120, 115, 130)
 
