@@ -287,7 +287,7 @@ class MainWindow(QMainWindow):
         if not self.active_debugger:
             (program_to_debug,
              working_directory, arguments) = StartProgramDialog().get_inputs()
-            if os.path.isfile(program_to_debug):
+            if program_to_debug and os.path.isfile(program_to_debug):
                 if not working_directory:
                     working_directory = os.path.dirname(program_to_debug)
                 self.try_add_tab(program_to_debug)
@@ -368,7 +368,7 @@ class TabWidget(QTabWidget):
 
 class StacktraceWidget(QWidget):
     def __init__(self, parent):
-        super().__init__()
+        super().__init__(parent)
         self.parent = parent
         self.tree = QTreeView(self)
         layout = QVBoxLayout(self)

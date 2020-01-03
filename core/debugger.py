@@ -3,15 +3,16 @@ import collections
 from bytecode import Instr, Bytecode
 from enum import Enum
 from contextlib import redirect_stdout, redirect_stderr
-from utils.redirect_stdin import redirect_stdin
-from utils.change_working_directory import change_working_directory
-from utils.change_sys_arguments import change_sys_arguments
+from utils.utils import (change_working_directory, change_sys_arguments,
+                         redirect_stdin)
 import core.debuggerLoader as debuggerLoader
 import sys
 import os
 
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)),
                              os.path.pardir))
+
+print(redirect_stdout)
 
 
 class Breakpoint:
@@ -204,9 +205,9 @@ class Debugger:
             '__name__': '__main__',
         }
         self.start_stacktrace_len = self.get_start_stacktrace_len()
-        with (redirect_stdout(stdout), redirect_stderr(stderr),
-              redirect_stdin(stdin), change_working_directory(new_wd),
-              change_sys_arguments(arguments)):
+        with redirect_stdout(stdout), redirect_stderr(stderr), \
+                redirect_stdin(stdin), change_working_directory(new_wd), \
+                change_sys_arguments(arguments):
             try:
                 exec(modified_code, _globals)
             except BaseException:
