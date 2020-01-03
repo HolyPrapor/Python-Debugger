@@ -3,7 +3,7 @@ from PyQt5.QtGui import QIcon, QStandardItem, QStandardItemModel, QTextCursor, \
 from PyQt5.QtWidgets import QMainWindow, QAction, QTabWidget, \
     QApplication, QFileDialog, QMessageBox, QWidget, \
     QVBoxLayout, QTreeView, QTextEdit, QHBoxLayout, QInputDialog, QLineEdit,\
-    QDialog, QDialogButtonBox, QFormLayout
+    QDialog, QDialogButtonBox, QFormLayout, QPushButton
 from core.editor import Editor, BACKGROUND_COLOR
 import core.debugger as debugger
 from PyQt5.QtCore import QCoreApplication, pyqtSignal
@@ -271,7 +271,9 @@ class MainWindow(QMainWindow):
         if not self.active_debugger:
             (program_to_debug,
              working_directory, arguments) = StartProgramDialog().get_inputs()
-            if program_to_debug and os.path.isdir(working_directory):
+            if os.path.isfile(program_to_debug):
+                if not working_directory:
+                    working_directory = os.path.dirname(program_to_debug)
                 self.try_add_tab(program_to_debug)
                 self.input = collections.deque()
                 self.providing_input = False
@@ -284,12 +286,13 @@ class MainWindow(QMainWindow):
                            kwargs={'stdout': self.stdout,
                                    'stderr': self.stderr,
                                    'stdin': self.stdin,
-                                   'after_debug_func': self.after_debug_func,
+                                   'after_debug_func':
+                                       self.after_debug_func,
                                    'new_wd': working_directory,
                                    'arguments': arguments.split()})
                 t.daemon = True
                 t.start()
-            else:
+            elif program_to_debug or working_directory or arguments:
                 self.write_to_stdout("Path to file or WD was incorrect\n",
                                      STDERR_COLOR)
 
@@ -428,19 +431,30 @@ class StartProgramDialog(QDialog):
         super().__init__(parent)
 
         self.path_to_program = QLineEdit(self)
+        self.path_to_program_dialog_button = QPushButton(self)
+        self.path_to_program_dialog_button.setText("Open File")
         self.working_directory = QLineEdit(self)
+        self.working_directory_dialog_button = QPushButton(self)
+        self.working_directory_dialog_button.setText("Open Directory")
         self.arguments = QLineEdit(self)
         buttonBox = QDialogButtonBox(QDialogButtonBox.Ok
                                      | QDialogButtonBox.Cancel, self)
 
         layout = QFormLayout(self)
         layout.addRow("Path to program", self.path_to_program)
+        layout.addRow(self.path_to_program_dialog_button)
         layout.addRow("Working directory", self.working_directory)
+        layout.addRow(self.working_directory_dialog_button)
         layout.addRow("Arguments", self.arguments)
         layout.addWidget(buttonBox)
 
+        self.setFixedSize(640, 200)
+
         buttonBox.accepted.connect(self.accept)
         buttonBox.rejected.connect(self.reject)
+        self.path_to_program_dialog_button.clicked.connect(self.get_filename)
+        self.working_directory_dialog_button.clicked.connect(
+            self.get_directory)
 
     def get_inputs(self):
         result = self.exec()
@@ -448,6 +462,16 @@ class StartProgramDialog(QDialog):
             return self.path_to_program.text(),\
                    self.working_directory.text(), self.arguments.text()
         return None, None, None
+
+    def get_filename(self):
+        filename, ok = QFileDialog.getOpenFileName(self, 'Select file')
+        if ok:
+            self.path_to_program.setText(filename)
+
+    def get_directory(self):
+        directory = QFileDialog.getExistingDirectory(self, 'Select folder')
+        if directory:
+            self.working_directory.setText(directory)
 
 
 class GuiDebugger:
