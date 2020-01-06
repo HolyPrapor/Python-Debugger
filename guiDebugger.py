@@ -33,6 +33,7 @@ from threading import Thread
 import inspect
 import types
 import collections
+import shlex
 
 sys.path.append(
     os.path.join(os.path.dirname(os.path.abspath(__file__)), os.path.pardir)
@@ -380,7 +381,7 @@ class MainWindow(QMainWindow):
                         "stdin": self.stdin,
                         "after_debug_func": self.after_debug_func,
                         "new_wd": working_directory,
-                        "arguments": arguments.split(),
+                        "arguments": self.get_arguments_from_line(arguments),
                     },
                 )
                 t.daemon = True
@@ -404,6 +405,9 @@ class MainWindow(QMainWindow):
 
     def write_to_stdout(self, message, color):
         self.output_widget.write_with_color(message, color)
+
+    def get_arguments_from_line(self, arguments):
+        return shlex.split(arguments)
 
 
 class InputProvider:
