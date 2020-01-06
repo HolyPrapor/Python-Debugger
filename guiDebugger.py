@@ -1,11 +1,29 @@
-from PyQt5.QtGui import (QIcon, QStandardItem, QStandardItemModel, QTextCursor,
-                         QColor)
-from PyQt5.QtWidgets import (QMainWindow, QAction, QTabWidget,
-                             QApplication, QFileDialog, QMessageBox, QWidget,
-                             QVBoxLayout, QTreeView, QTextEdit, QHBoxLayout,
-                             QInputDialog, QLineEdit,
-                             QDialog, QDialogButtonBox, QFormLayout,
-                             QPushButton)
+from PyQt5.QtGui import (
+    QIcon,
+    QStandardItem,
+    QStandardItemModel,
+    QTextCursor,
+    QColor,
+)
+from PyQt5.QtWidgets import (
+    QMainWindow,
+    QAction,
+    QTabWidget,
+    QApplication,
+    QFileDialog,
+    QMessageBox,
+    QWidget,
+    QVBoxLayout,
+    QTreeView,
+    QTextEdit,
+    QHBoxLayout,
+    QInputDialog,
+    QLineEdit,
+    QDialog,
+    QDialogButtonBox,
+    QFormLayout,
+    QPushButton,
+)
 from core.editor import Editor, BACKGROUND_COLOR
 import core.debugger as debugger
 from PyQt5.QtCore import QCoreApplication, pyqtSignal
@@ -16,8 +34,9 @@ import inspect
 import types
 import collections
 
-sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                             os.path.pardir))
+sys.path.append(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), os.path.pardir)
+)
 
 STDOUT_COLOR = QColor(0, 0, 0)
 STDERR_COLOR = QColor(255, 0, 0)
@@ -58,6 +77,7 @@ class MainWindow(QMainWindow):
         self.providing_input = False
         self.active_debugger = False
         self.setup_signals()
+        self.last_launch_info = dict()
 
     def setup_signals(self):
         self.debug_function_handler.connect(self.highlight_current_line)
@@ -69,9 +89,10 @@ class MainWindow(QMainWindow):
 
     def setup_tab_widget(self):
         path = os.path.dirname(os.path.abspath(__file__))
-        close_button_hover_image = os.path.join(path, 'icons/close_hover.svg')
-        close_button_image = os.path.join(path, 'icons/close.svg')
-        self.tab.setStyleSheet("""
+        close_button_hover_image = os.path.join(path, "icons/close_hover.svg")
+        close_button_image = os.path.join(path, "icons/close.svg")
+        self.tab.setStyleSheet(
+            """
         QTabWidget::pane {background: #272727;}
         QTabWidget::tab-bar:top {top: 1px;}
         QTabWidget::tab-bar:bottom {bottom: 1px;}
@@ -93,41 +114,74 @@ class MainWindow(QMainWindow):
         QTabBar::close-button:hover {
             image: url(%s)
         }
-        """ % (close_button_hover_image, close_button_image))
+        """
+            % (close_button_hover_image, close_button_image)
+        )
 
     def setup_toolbar(self):
         path = os.path.dirname(os.path.abspath(__file__))
-        self.toolbar = self.addToolBar('Debug actions')
-        self.toolbar.addAction(QAction(QIcon(
-            os.path.join(path, 'icons/start-debug-icon.svg')),
-            'Start debugging', self, shortcut='F5',
-            triggered=self.start_debugging))
-        self.toolbar.addAction(QAction(QIcon(
-            os.path.join(path, 'icons/continue-icon.svg')), 'Continue',
-            self, shortcut='F9', triggered=self.continue_until_breakpoint))
-        self.toolbar.addAction(QAction(QIcon(
-            os.path.join(path, 'icons/step-in-icon.svg')),
-            'Step in', self, shortcut='F7',
-            triggered=self.make_step))
-        self.toolbar.addAction(QAction(QIcon(
-            os.path.join(path, 'icons/step-over-icon.svg')),
-            'Step over', self, shortcut='F8',
-            triggered=self.step_over))
-        self.toolbar.addAction(QAction(QIcon(
-            os.path.join(path, 'icons/exec-code-icon.svg')),
-            'Exec code', self, shortcut='F6',
-            triggered=self.exec_code))
-        self.toolbar.addAction(QAction(QIcon(
-            os.path.join(path, 'icons/stop-debug-icon.svg')),
-            'Stop debug', self, shortcut='F3',
-            triggered=self.stop_debug))
+        self.toolbar = self.addToolBar("Debug actions")
+        self.toolbar.addAction(
+            QAction(
+                QIcon(os.path.join(path, "icons/start-debug-icon.svg")),
+                "Start debugging",
+                self,
+                shortcut="F5",
+                triggered=self.start_debugging,
+            )
+        )
+        self.toolbar.addAction(
+            QAction(
+                QIcon(os.path.join(path, "icons/continue-icon.svg")),
+                "Continue",
+                self,
+                shortcut="F9",
+                triggered=self.continue_until_breakpoint,
+            )
+        )
+        self.toolbar.addAction(
+            QAction(
+                QIcon(os.path.join(path, "icons/step-in-icon.svg")),
+                "Step in",
+                self,
+                shortcut="F7",
+                triggered=self.make_step,
+            )
+        )
+        self.toolbar.addAction(
+            QAction(
+                QIcon(os.path.join(path, "icons/step-over-icon.svg")),
+                "Step over",
+                self,
+                shortcut="F8",
+                triggered=self.step_over,
+            )
+        )
+        self.toolbar.addAction(
+            QAction(
+                QIcon(os.path.join(path, "icons/exec-code-icon.svg")),
+                "Exec code",
+                self,
+                shortcut="F6",
+                triggered=self.exec_code,
+            )
+        )
+        self.toolbar.addAction(
+            QAction(
+                QIcon(os.path.join(path, "icons/stop-debug-icon.svg")),
+                "Stop debug",
+                self,
+                shortcut="F3",
+                triggered=self.stop_debug,
+            )
+        )
 
     def set_window_ui(self):
         """UI Initialization"""
         path = os.path.dirname(os.path.abspath(__file__))
         self.setWindowTitle("Python debugger")
         self.resize(1000, 500)
-        self.setWindowIcon(QIcon(os.path.join(path, 'icons/veredit.ico')))
+        self.setWindowIcon(QIcon(os.path.join(path, "icons/veredit.ico")))
         self.showMaximized()
 
     def set_menu(self):
@@ -135,57 +189,73 @@ class MainWindow(QMainWindow):
         path = os.path.dirname(os.path.abspath(__file__))
         menu = self.menuBar()
         # FILE MENU
-        file_menu = menu.addMenu('File')
-        file_menu.addAction(QAction(QIcon(os.path.join(path,
-                                                       'icons/open.svg')),
-                                    '&Open', self, shortcut='Ctrl+O',
-                                    triggered=self._open_file))
+        file_menu = menu.addMenu("File")
         file_menu.addAction(
-            QAction(QIcon(os.path.join(path,
-                                       'icons/power.svg')),
-                    '&Quit', self, shortcut='Ctrl+Q',
-                    triggered=self._quit))
+            QAction(
+                QIcon(os.path.join(path, "icons/open.svg")),
+                "&Open",
+                self,
+                shortcut="Ctrl+O",
+                triggered=self._open_file,
+            )
+        )
+        file_menu.addAction(
+            QAction(
+                QIcon(os.path.join(path, "icons/power.svg")),
+                "&Quit",
+                self,
+                shortcut="Ctrl+Q",
+                triggered=self._quit,
+            )
+        )
 
         # HELP MENU
-        help_menu = menu.addMenu('&Help')
+        help_menu = menu.addMenu("&Help")
         help_menu.addAction(
-            QAction(QIcon(os.path.join(path,
-                                       'icons/info.svg')),
-                    '&Info', self, shortcut='F1',
-                    triggered=self._about))
+            QAction(
+                QIcon(os.path.join(path, "icons/info.svg")),
+                "&Info",
+                self,
+                shortcut="F1",
+                triggered=self._about,
+            )
+        )
 
     def _open_file(self):
         """Open file and set it in a new tab or in current if tab is empty"""
-        file = QFileDialog.getOpenFileName(self, 'Open file', ".")[0]
+        file = QFileDialog.getOpenFileName(self, "Open file", ".")[0]
         if file:
             self.try_add_tab(file)
 
     def try_add_tab(self, filename):
         if filename not in self.tab.tab_container:
             file_name = os.path.basename(filename)
-            editor = Editor(self, filename, self.add_breakpoint,
-                            self.remove_breakpoint)
-            with open(filename, 'r') as text:
+            editor = Editor(
+                self, filename, self.add_breakpoint, self.remove_breakpoint
+            )
+            with open(filename, "r") as text:
                 self.tab.addTab(editor, file_name)
                 editor.setText(text.read())
             self.tab.tab_container[filename] = editor
         self.tab.setCurrentWidget(self.tab.tab_container[filename])
 
     def _about(self):
-        QMessageBox.about(self,
-                          'About Python Debugger',
-                          'Ctrl + O : Open file\n'
-                          'F5 : Launch debugger on current opened file\n'
-                          'F7 : Step in\n'
-                          'F8 : Step over\n'
-                          'F9 : Continue\n'
-                          'F6 : Exec code\n'
-                          'F3 : Stop debugger\n'
-                          'Ctrl + Q : Exit debugger\n'
-                          'Editing stack values allowed through stack widget\n'
-                          'To place a breakpoint click near the line number\n'
-                          'To place a conditional breakpoint click while '
-                          'holding SHIFT button')
+        QMessageBox.about(
+            self,
+            "About Python Debugger",
+            "Ctrl + O : Open file\n"
+            "F5 : Launch debugger on current opened file\n"
+            "F7 : Step in\n"
+            "F8 : Step over\n"
+            "F9 : Continue\n"
+            "F6 : Exec code\n"
+            "F3 : Stop debugger\n"
+            "Ctrl + Q : Exit debugger\n"
+            "Editing stack values allowed through stack widget\n"
+            "To place a breakpoint click near the line number\n"
+            "To place a conditional breakpoint click while "
+            "holding SHIFT button",
+        )
 
     def _quit(self):
         QCoreApplication.quit()
@@ -211,8 +281,7 @@ class MainWindow(QMainWindow):
                 self.set_bg_color(QColor(BACKGROUND_COLOR))
                 self.tab.currentWidget().clear_highlights()
                 self.try_add_tab(filename)
-                self.tab.currentWidget().setCursorPosition(
-                    line_number - 1, 0)
+                self.tab.currentWidget().setCursorPosition(line_number - 1, 0)
                 self.tab.currentWidget().set_line_highlight(line_number - 1)
 
     def set_bg_color(self, qcolor):
@@ -228,8 +297,10 @@ class MainWindow(QMainWindow):
     def exec_code(self):
         if self.active_debugger:
             self.debugger.exec_code(
-                QBigInputDialog(self, "Exec code",
-                                "Write your code to launch:").readlines())
+                QBigInputDialog(
+                    self, "Exec code", "Write your code to launch:"
+                ).readlines()
+            )
             self.show_stacktrace()
 
     def add_breakpoint(self, filename, line_num, condition):
@@ -248,9 +319,9 @@ class MainWindow(QMainWindow):
     def get_input(self):
         while len(self.input) == 0 and not self.providing_input:
             self.providing_input = True
-            lines = QBigInputDialog(self,
-                                    "Input dialog",
-                                    "Write your input").readlines()
+            lines = QBigInputDialog(
+                self, "Input dialog", "Write your input"
+            ).readlines()
             if lines:
                 for line in lines.split():
                     self.input.append(line)
@@ -261,8 +332,9 @@ class MainWindow(QMainWindow):
             for index in range(len(self.tab.tab_container)):
                 widget = self.tab.widget(index)
                 for bp in widget.breakpoints:
-                    self.debugger.add_breakpoint(bp.filename, bp.line_number,
-                                                 bp.condition)
+                    self.debugger.add_breakpoint(
+                        bp.filename, bp.line_number, bp.condition
+                    )
 
     def after_debug_func(self):
         if self.active_debugger:
@@ -285,8 +357,11 @@ class MainWindow(QMainWindow):
 
     def start_debugging(self):
         if not self.active_debugger:
-            (program_to_debug,
-             working_directory, arguments) = StartProgramDialog().get_inputs()
+            (
+                program_to_debug,
+                working_directory,
+                arguments,
+            ) = StartProgramDialog(self).get_inputs()
             if program_to_debug and os.path.isfile(program_to_debug):
                 if not working_directory:
                     working_directory = os.path.dirname(program_to_debug)
@@ -296,28 +371,36 @@ class MainWindow(QMainWindow):
                 self.active_debugger = True
                 self.debugger = debugger.Debugger()
                 self.set_breakpoints_from_tabs()
-                t = Thread(target=self.debugger.start_debugging,
-                           args=(self.debug_function,
-                                 program_to_debug),
-                           kwargs={'stdout': self.stdout,
-                                   'stderr': self.stderr,
-                                   'stdin': self.stdin,
-                                   'after_debug_func':
-                                       self.after_debug_func,
-                                   'new_wd': working_directory,
-                                   'arguments': arguments.split()})
+                t = Thread(
+                    target=self.debugger.start_debugging,
+                    args=(self.debug_function, program_to_debug),
+                    kwargs={
+                        "stdout": self.stdout,
+                        "stderr": self.stderr,
+                        "stdin": self.stdin,
+                        "after_debug_func": self.after_debug_func,
+                        "new_wd": working_directory,
+                        "arguments": arguments.split(),
+                    },
+                )
                 t.daemon = True
                 t.start()
+                self.last_launch_info[program_to_debug] = (
+                    program_to_debug,
+                    working_directory,
+                    arguments,
+                )
             elif program_to_debug or working_directory or arguments:
-                self.write_to_stdout("Path to file or WD was incorrect\n",
-                                     STDERR_COLOR)
+                self.write_to_stdout(
+                    "Path to file or WD was incorrect\n", STDERR_COLOR
+                )
 
     def get_current_tab_filename(self):
         current_widget = self.tab.currentWidget()
         for filename, widget in self.tab.tab_container.items():
             if current_widget == widget:
                 return filename
-        raise LookupError
+        return None
 
     def write_to_stdout(self, message, color):
         self.output_widget.write_with_color(message, color)
@@ -360,9 +443,11 @@ class TabWidget(QTabWidget):
 
     def removeTab(self, index):
         tab_to_remove = super().widget(index)
-        self.tab_container = {filename: tab for filename, tab
-                              in self.tab_container.items()
-                              if tab != tab_to_remove}
+        self.tab_container = {
+            filename: tab
+            for filename, tab in self.tab_container.items()
+            if tab != tab_to_remove
+        }
         super().removeTab(index)
 
 
@@ -374,7 +459,7 @@ class StacktraceWidget(QWidget):
         layout = QVBoxLayout(self)
         layout.addWidget(self.tree)
         self.model = QStandardItemModel()
-        self.model.setHorizontalHeaderLabels(['Level', 'Values'])
+        self.model.setHorizontalHeaderLabels(["Level", "Values"])
         self.tree.header().setDefaultSectionSize(180)
         self.tree.setModel(self.model)
 
@@ -383,9 +468,13 @@ class StacktraceWidget(QWidget):
         root = self.model.invisibleRootItem()
         for index, stack_values in enumerate(data):
             parent = QStandardItem(
-                str(stack_values.f_code.co_name) +
-                str(inspect.signature(
-                    types.FunctionType(stack_values.f_code, {}))))
+                str(stack_values.f_code.co_name)
+                + str(
+                    inspect.signature(
+                        types.FunctionType(stack_values.f_code, {})
+                    )
+                )
+            )
             parent.setEditable(False)
             for key, value in stack_values.f_locals.items():
                 keyWidget = QStandardItem(str(key))
@@ -394,10 +483,10 @@ class StacktraceWidget(QWidget):
                     value_as_str = repr(value)
                 except BaseException:
                     value_as_str = "Can't see"
-                valueWidget = ValueWidget(self.parent,
-                                          value_as_str, str(key), str(index))
-                parent.appendRow([keyWidget,
-                                  valueWidget])
+                valueWidget = ValueWidget(
+                    self.parent, value_as_str, str(key), str(index)
+                )
+                parent.appendRow([keyWidget, valueWidget])
             root.appendRow(parent)
 
 
@@ -426,20 +515,20 @@ class QDbgConsole(QTextEdit):
         self.moveCursor(QTextCursor.End)
 
 
-class QBigInputDialog():
+class QBigInputDialog:
     def __init__(self, parentWidget, title, label):
         self.parentWidget = parentWidget
         self.title = title
         self.label = label
 
     def readlines(self):
-        text, ok = QInputDialog.getMultiLineText(self.parentWidget,
-                                                 self.title,
-                                                 self.label)
+        text, ok = QInputDialog.getMultiLineText(
+            self.parentWidget, self.title, self.label
+        )
         if ok:
             return str(text)
         else:
-            return ''
+            return ""
 
 
 class StartProgramDialog(QDialog):
@@ -453,8 +542,9 @@ class StartProgramDialog(QDialog):
         self.working_directory_dialog_button = QPushButton(self)
         self.working_directory_dialog_button.setText("Open Directory")
         self.arguments = QLineEdit(self)
-        buttonBox = QDialogButtonBox(QDialogButtonBox.Ok
-                                     | QDialogButtonBox.Cancel, self)
+        buttonBox = QDialogButtonBox(
+            QDialogButtonBox.Ok | QDialogButtonBox.Cancel, self
+        )
 
         layout = QFormLayout(self)
         layout.addRow("Path to program", self.path_to_program)
@@ -470,22 +560,42 @@ class StartProgramDialog(QDialog):
         buttonBox.rejected.connect(self.reject)
         self.path_to_program_dialog_button.clicked.connect(self.get_filename)
         self.working_directory_dialog_button.clicked.connect(
-            self.get_directory)
+            self.get_directory
+        )
+        if parent:
+            current_tab_filename = parent.get_current_tab_filename()
+            if (
+                current_tab_filename
+                and current_tab_filename in parent.last_launch_info
+            ):
+                (path, wd, arguments) = parent.last_launch_info[
+                    current_tab_filename
+                ]
+                self.path_to_program.setText(path)
+                self.working_directory.setText(wd)
+                self.arguments.setText(arguments)
+            elif current_tab_filename:
+                self.path_to_program.setText(current_tab_filename)
+                working_directory = os.path.dirname(current_tab_filename)
+                self.working_directory.setText(working_directory)
 
     def get_inputs(self):
         result = self.exec()
         if result:
-            return (self.path_to_program.text(),
-                    self.working_directory.text(), self.arguments.text())
+            return (
+                self.path_to_program.text(),
+                self.working_directory.text(),
+                self.arguments.text(),
+            )
         return None, None, None
 
     def get_filename(self):
-        filename, ok = QFileDialog.getOpenFileName(self, 'Select file')
+        filename, ok = QFileDialog.getOpenFileName(self, "Select file")
         if ok:
             self.path_to_program.setText(filename)
 
     def get_directory(self):
-        directory = QFileDialog.getExistingDirectory(self, 'Select folder')
+        directory = QFileDialog.getExistingDirectory(self, "Select folder")
         if directory:
             self.working_directory.setText(directory)
 
@@ -498,7 +608,8 @@ class GuiDebugger:
     def debug_function(self):
         self.window.debug_function_handler.emit(
             self.window.debugger.get_filename(),
-            self.window.debugger.get_line_number())
+            self.window.debugger.get_line_number(),
+        )
 
 
 def main():
@@ -507,5 +618,5 @@ def main():
     sys.exit(gui_debugger.app.exec_())
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

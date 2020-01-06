@@ -12,8 +12,6 @@ import os
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)),
                              os.path.pardir))
 
-print(redirect_stdout)
-
 
 class Breakpoint:
     def __init__(self, filename, line_number, condition=None):
@@ -52,8 +50,8 @@ class Debugger:
         self.start_stacktrace_len = 0
 
     def debug(self):
-        self.current_stacktrace = self.get_stacktrace()
         self.current_program_frame = inspect.currentframe().f_back
+        self.current_stacktrace = self.get_stacktrace()
         if (self.current_debug_mode == DebugMode.StepMode or
                 self.should_stop_on_breakpoint()):
             self.current_debugger_state = DebuggerState.Stopped
@@ -211,7 +209,7 @@ class Debugger:
             try:
                 exec(modified_code, _globals)
             except BaseException:
-                print(sys.exc_info())
+                print(sys.exc_info(), file=sys.stderr)
             self.stop_debug()
 
     def stop_debug(self):
