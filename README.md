@@ -38,7 +38,7 @@ Help: Ctrl + I
 
 
 ## Implementation details
-This python debugger uses bytecode module to insert debug fuction on every line. This means, that on each line your debug function is executed. Then we use different python modules to get information about stacktrace, code context, current line. 
+This python debugger uses bytecode module to insert debug function on every line. In other words, we call debug control function on every line. Then we use different python modules to get information about stacktrace, code context, current line. 
 Import modules works through custom import module. Additional information can be gathered in source files.
 
 GUI uses PyQT5 as main engine, and Qscintilla for code editor widget.
