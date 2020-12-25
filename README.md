@@ -15,7 +15,7 @@ This application was created for debugging python programs.
 
 
 ## Structure
-* Console version: `consoleDebugger.py` # NOT RECOMMENDEDED TO USE
+* Console version: `consoleDebugger.py` # NOT RECOMMENDED TO USE
 * GUI version: `guiDebugger.py`
 
 
